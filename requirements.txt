@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+bcrypt==4.0.1
+pyjwt
+trino
+pydantic[email]
+python-dotenv
