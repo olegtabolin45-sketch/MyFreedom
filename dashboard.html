@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель расчета — MyFreedom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; letter-spacing: -0.022em; }
+        body { background-color: #f5f5f7; color: #1d1d1f; min-height: 100vh; padding-top: 80px; display: flex; flex-direction: column; align-items: center; }
+        header { position: fixed; top: 0; width: 100%; height: 48px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0, 0, 0, 0.08); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 10; }
+        .logo { font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; }
+        .user-greeting { font-size: 14px; color: #86868b; }
+        .main-container { max-width: 600px; width: 100%; padding: 20px; animation: fadeIn 0.4s ease; }
+        h1 { font-size: 28px; font-weight: 600; margin-bottom: 24px; text-align: center; }
+        .card { background: #ffffff; border-radius: 18px; padding: 30px; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 24px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        .input-form { display: flex; flex-direction: column; gap: 16px; }
+        .input-field { display: flex; flex-direction: column; gap: 6px; }
+        .input-field label { font-size: 13px; font-weight: 500; color: #86868b; }
+        .input-form input { height: 46px; padding: 0 14px; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 15px; }
+        .input-form input:focus { outline: none; border-color: #0071e3; box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15); }
+        .btn-calc { height: 46px; background-color: #0071e3; color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+        .btn-calc:hover { background-color: #0077ed; }
+        .result-title { font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+        .result-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f7; font-size: 15px; }
+        .result-item:last-child { border: none; }
+        .val { font-weight: 600; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">MyFreedom</div>
+        <div class="user-greeting" id="userGreeting">Привет, Пользователь</div>
+    </header>
+
+    <div class="main-container">
+        <h1 id="welcomeTitle">Финансовый план независимости</h1>
+        
+        <div class="card">
+            <form class="input-form" id="calcForm">
+                <div class="input-field">
+                    <label>Стартовый капитал (₽)</label>
+                    <input type="number" id="initial" value="100000" required>
+                </div>
+                <div class="input-field">
+                    <label>Ежемесячное пополнение (₽)</label>
+                    <input type="number" id="monthly" value="15000" required>
+                </div>
+                <div class="input-field">
+                    <label>Ожидаемая доходность (% годовых)</label>
+                    <input type="number" id="rate" value="15" step="0.1" required>
+                </div>
+                <button type="submit" class="btn-calc">Рассчитать трек</button>
+            </form>
+        </div>
+
+        <div class="card" id="resultsCard" style="display: none;">
+            <div class="result-title">Ваша траектория через 10 лет</div>
+            <div id="trajectoryList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Отображаем имя пользователя
+        const username = localStorage.getItem('myfreedom_user') || 'Гость';
+        document.getElementById('userGreeting').innerText = `Привет, ${username}`;
+
+        document.getElementById('calcForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const initial = parseFloat(document.getElementById('initial').value);
+            const monthly = parseFloat(document.getElementById('monthly').value);
+            const rate = parseFloat(document.getElementById('rate').value) / 100;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: username,
+                        initial_capital: initial,
+                        monthly_investment: monthly,
+                        annual_interest_rate: rate
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    const list = document.getElementById('trajectoryList');
+                    list.innerHTML = "";
+                    
+                    // Показываем только ключевые точки для пользователя (например, 1, 5 и 10 год)
+                    result.trajectory.forEach(item => {
+                        list.innerHTML += `
+                            <div class="result-item">
+                                <span>${item.year}</span>
+                                <span class="val">${item.balance.toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('resultsCard').style.display = "block";
+                }
+            } catch (error) {
+                alert("Ошибка при расчете.");
+            }
+        });
+    </script>
+</body>
+</html>

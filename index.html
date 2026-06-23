@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aeterna Analytics — Учет капитала</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
+        
+        body { 
+            background-color: #ffffff; /* Кристально белый чистый фон */
+            color: #1d1d1f; 
+            min-height: 100vh; 
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header { 
+            width: 100%; 
+            height: 64px; 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border-bottom: 1px solid #e5e5ea; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 40px;
+            z-index: 10; 
+        }
+        
+        /* Строгий, геометричный логотип */
+        .logo-box { display: flex; align-items: center; gap: 12px; }
+        .logo-icon { 
+            font-weight: 700; 
+            font-size: 16px; 
+            letter-spacing: 0.05em; 
+            color: #ffffff; 
+            background: #1d1d1f; 
+            padding: 4px 8px; 
+            border-radius: 4px;
+        }
+        .logo-text { font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #1d1d1f; }
+
+        /* Главный контейнер */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            align-items: center;
+            padding: 40px;
+            gap: 100px;
+        }
+
+        /* ЛЕВАЯ СЕКЦИЯ */
+        .promo-section {
+            flex: 1;
+            text-align: left;
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .tagline { color: #86868b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .promo-section h1 {
+            font-size: 44px;
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+        .promo-section p {
+            font-size: 17px;
+            color: #515154;
+            line-height: 1.55;
+            max-width: 460px;
+        }
+
+        /* ПРАВАЯ СЕКЦИЯ */
+        .action-section {
+            width: 400px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Лаконичные кнопки */
+        .welcome-buttons-block {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: fadeIn 0.4s ease;
+        }
+        .btn-welcome {
+            height: 52px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .btn-welcome.primary {
+            background-color: #1d1d1f;
+            color: #ffffff;
+            border: none;
+        }
+        .btn-welcome.primary:hover { background-color: #000000; }
+        .btn-welcome.secondary {
+            background-color: #ffffff;
+            color: #1d1d1f;
+            border: 1px solid #d2d2d7;
+        }
+        .btn-welcome.secondary:hover { background-color: #f5f5f7; border-color: #86868b; }
+        .btn-welcome:active { transform: scale(0.99); }
+
+        /* Белая премиальная карточка */
+        .card-container { 
+            width: 100%;
+            padding: 36px 32px; 
+            background: #ffffff;
+            border: 1px solid #e5e5ea;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Личный кабинет на весь экран */
+        .welcome-container {
+            max-width: 800px;
+            margin: 60px auto;
+            text-align: center;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cardAppear { from { opacity: 0; transform: scale(0.99) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .card-container h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; text-align: center; color: #1d1d1f; }
+        .card-container .subtitle { font-size: 14px; color: #86868b; margin-bottom: 24px; text-align: center; }
+        
+        .auth-form { display: flex; flex-direction: column; gap: 14px; }
+        .input-wrapper { position: relative; width: 100%; }
+        
+        .auth-form input { 
+            width: 100%; 
+            height: 48px; 
+            padding: 0 14px; 
+            background-color: #ffffff;
+            border: 1px solid #d2d2d7; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            color: #1d1d1f;
+            transition: all 0.15s ease; 
+        }
+        .auth-form .input-wrapper input { padding-right: 40px; }
+        .auth-form input:focus { outline: none; border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); }
+        
+        /* Кнопки очистки и глаза */
+        .clear-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: #f5f5f7; border: none; border-radius: 50%; width: 18px; height: 18px; color: #86868b; font-size: 11px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; }
+        .clear-btn:hover { background: #e5e5ea; color: #1d1d1f; }
+        .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #86868b; display: flex; align-items: center; justify-content: center; padding: 4px; }
+        .eye-btn:hover { color: #1d1d1f; }
+
+        .remember-container { display: flex; align-items: center; gap: 8px; text-align: left; font-size: 14px; color: #515154; cursor: pointer; user-select: none; }
+        .remember-container input { width: 16px; height: 16px; accent-color: #1d1d1f; }
+
+        /* Сложность пароля */
+        .strength-container { text-align: left; margin-top: -2px; }
+        .strength-meter { height: 3px; width: 100%; background-color: #e5e5ea; border-radius: 1.5px; overflow: hidden; margin-bottom: 4px; }
+        .strength-bar { height: 100%; width: 0%; transition: all 0.25s ease; }
+        .strength-text { font-size: 12px; color: #86868b; }
+
+        .btn-submit { height: 48px; background-color: #1d1d1f; color: #ffffff; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; justify-content: center; }
+        .btn-submit:hover { background-color: #000000; }
+        .btn-submit:active { transform: scale(0.99); }
+        .btn-submit:disabled { background-color: #f5f5f7; color: #d2d2d7; cursor: not-allowed; transform: none; }
+        
+        .form-footer { margin-top: 20px; font-size: 14px; color: #86868b; text-align: center; }
+        .form-footer a { color: #1d1d1f; text-decoration: none; font-weight: 500; }
+        .form-footer a:hover { text-decoration: underline; }
+        .message { margin-top: 14px; font-size: 14px; padding: 10px; border-radius: 6px; text-align: left; display: none; background-color: #fff2f2; color: #ff3b30; border: 1px solid #ffcccc; }
+
+        /* Дашборд ЛК */
+        .welcome-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 32px 0; text-align: left; }
+        .dashboard-card { background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s ease; }
+        .dashboard-card:hover { border-color: #1d1d1f; background-color: #fafafa; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .dashboard-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: #1d1d1f; }
+        .dashboard-card p { font-size: 14px; color: #515154; line-height: 1.45; }
+        
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; background: #f2fbf4; color: #24b24b; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; margin-bottom: 20px; border: 1px solid #e1f5e7; }
+        .status-dot { width: 6px; height: 6px; background-color: #24b24b; border-radius: 50%; }
+        .btn-logout { background-color: #ffffff; color: #ff3b30; border: 1px solid #ff3b30; margin-top: 12px; width: 100%; }
+        .btn-logout:hover { background-color: #fff2f2; }
+
+        .landing-mode { display: flex !important; }
+        .authorized-mode { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-box">
+            <span class="logo-icon">Æ</span>
+            <span class="logo-text">Aeterna</span>
+        </div>
+    </header>
+
+    <!-- ГЛАВНЫЙ ЭКРАН (ЛЕНДИНГ) -->
+    <div class="main-wrapper landing-mode" id="landingWrapper">
+        
+        <div class="promo-section">
+            <div class="tagline">Аналитическая экосистема</div>
+            <h1>Аналитика капитала,<br>проверенная временем.</h1>
+            <p>Высокоточный инструмент для комплексного учета активов. Прогнозируйте сложный процент, рассчитывайте налоги в различных юрисдикциях и ведите детальный аудит денежных потоков.</p>
+        </div>
+
+        <div class="action-section">
+            
+            <div class="welcome-buttons-block" id="startActionBlock">
+                <button class="btn-welcome primary" onclick="switchActionView('registerScreen')">Создать аккаунт</button>
+                <button class="btn-welcome secondary" onclick="switchActionView('loginScreen')">Войти в систему</button>
+            </div>
+
+            <!-- РЕГИСТРАЦИЯ -->
+            <div class="card-container" id="registerScreen" style="display: none;">
+                <h2>Регистрация</h2>
+                <div class="subtitle">Создайте аккаунт в экосистеме Aeterna</div>
+                <form class="auth-form" id="registerForm">
+                    <div class="input-wrapper">
+                        <input type="text" id="regUsername" placeholder="Имя инвестора" required>
+                        <button type="button" id="regUsernameClear" class="clear-btn" onclick="clearField('regUsername', 'regUsernameClear')">×</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="email" id="regEmail" placeholder="Email" required>
+                        <button type="button" id="regEmailClear" class="clear-btn" onclick="clearField('regEmail', 'regEmailClear')">×</button>
+                    </div>
+                    <div class="input-wrapper" onmouseleave="hidePassword('regPassword', 'regEyeBtn')">
+                        <input type="password" id="regPassword" placeholder="Мастер-пароль" required>
+                        <button type="button" id="regEyeBtn" class="eye-btn" onclick="togglePassword('regPassword', 'regEyeBtn')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <div class="strength-container">
+                        <div class="strength-meter"><div id="strengthBar" class="strength-bar"></div></div>
+                        <div id="strengthText" class="strength-text">Уровень защиты...</div>
+                    </div>
+                    <div class="input-wrapper" onmouseleave="hidePassword('regPasswordConfirm', 'regConfirmEyeBtn')">
+                        <input type="password" id="regPasswordConfirm" placeholder="Подтверждение пароля" required>
+                        <button type="button" id="regConfirmEyeBtn" class="eye-btn" onclick="togglePassword('regPasswordConfirm', 'regConfirmEyeBtn')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <button type="submit" id="regSubmitBtn" class="btn-submit">Получить доступ</button>
+                </form>
+                <div id="regError" class="message"></div>
+                <div class="form-footer">Уже в системе? <a href="#" onclick="switchActionView('loginScreen')">Войти</a></div>
+            </div>
+
+            <!-- ВХОД -->
+            <div class="card-container" id="loginScreen" style="display: none;">
+                <h2>Вход в систему</h2>
+                <div class="subtitle">Идентификация пользователя</div>
+                <form class="auth-form" id="loginForm">
+                    <div class="input-wrapper">
+                        <input type="email" id="loginEmail" placeholder="Email" required>
+                        <button type="button" id="loginEmailClear" class="clear-btn" onclick="clearField('loginEmail', 'loginEmailClear')">×</button>
+                    </div>
+                    <div class="input-wrapper" onmouseleave="hidePassword('loginPassword', 'loginEyeBtn')">
+                        <input type="password" id="loginPassword" placeholder="Пароль" required>
+                        <button type="button" id="loginEyeBtn" class="eye-btn" onclick="togglePassword('loginPassword', 'loginEyeBtn')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <label class="remember-container">
+                        <input type="checkbox" id="loginRemember" checked>
+                        <span>Сохранить токен доступа</span>
+                    </label>
+                    <button type="submit" id="loginSubmitBtn" class="btn-submit">Войти в панель</button>
+                </form>
+                <div id="loginError" class="message"></div>
+                <div class="form-footer">Впервые здесь? <a href="#" onclick="switchActionView('registerScreen')">Создать аккаунт</a></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- АВТОРИЗОВАННАЯ ЗОНА -->
+    <div class="card-container welcome-container authorized-mode" id="profileScreen">
+        <div class="status-pill"><span class="status-dot"></span>Сессия активна</div>
+        <h1 id="profileGreeting">Приветствуем, инвестор</h1>
+        <div class="subtitle">Панель управления распределенным портфелем активов.</div>
+        
+        <div class="welcome-grid">
+            <div class="dashboard-card" onclick="alert('Переход к учету транзакций...')">
+                <h3>Мультивалютный портфель</h3>
+                <p>Аналитика позиций: расчет средней цены, сплиты акций и точный учет комиссий.</p>
+            </div>
+            <div class="dashboard-card" onclick="alert('Открытие календаря выплат...')">
+                <h3>Календарь доходов</h3>
+                <p>Прогнозирование купонов, дивидендов и расчет чистой прибыли с учетом налогов.</p>
+            </div>
+            <div class="dashboard-card" onclick="alert('Запуск бенчмаркинга...')">
+                <h3>Бенчмаркинг</h3>
+                <p>Сравнение доходности вашего капитала (TWR/MWR) с мировыми индексами.</p>
+            </div>
+            <div class="dashboard-card" onclick="alert('Открытие настроек приватности...')">
+                <h3>Экспорт и приватность</h3>
+                <p>Полный контроль над конфиденциальностью данных и экспорт отчетов.</p>
+            </div>
+        </div>
+
+        <button class="btn-submit btn-logout" onclick="logout()">Завершить сессию</button>
+    </div>
+
+    <script>
+        const EYE_OPEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        const EYE_CLOSED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+
+        window.onload = function() {
+            const token = localStorage.getItem('aeterna_token') || sessionStorage.getItem('aeterna_token');
+            const savedUser = localStorage.getItem('aeterna_user') || sessionStorage.getItem('aeterna_user');
+            if (token && savedUser) { 
+                loginSuccess(savedUser, token, false); 
+            } else {
+                showLandingMode();
+            }
+            setupClearButtons();
+        };
+
+        function switchActionView(targetScreenId) {
+            document.getElementById('startActionBlock').style.display = 'none';
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('regError').style.display = 'none';
+            document.getElementById('loginError').style.display = 'none';
+
+            document.getElementById(targetScreenId).style.display = 'block';
+
+            if(targetScreenId === 'registerScreen') { document.getElementById('regUsername').focus(); }
+            if(targetScreenId === 'loginScreen') { document.getElementById('loginEmail').focus(); }
+        }
+
+        function showLandingMode() {
+            document.getElementById('landingWrapper').style.display = 'flex';
+            document.getElementById('profileScreen').style.display = 'none';
+            document.getElementById('startActionBlock').style.display = 'flex';
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+        }
+
+        function setupClearButtons() {
+            const fields = [
+                { inputId: 'regUsername', btnId: 'regUsernameClear' },
+                { inputId: 'regEmail', btnId: 'regEmailClear' },
+                { inputId: 'loginEmail', btnId: 'loginEmailClear' }
+            ];
+            fields.forEach(f => {
+                const input = document.getElementById(f.inputId);
+                const btn = document.getElementById(f.btnId);
+                input.addEventListener('input', () => {
+                    btn.style.display = input.value.length > 0 ? 'flex' : 'none';
+                });
+            });
+        }
+
+        function clearField(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            input.value = '';
+            document.getElementById(btnId).style.display = 'none';
+            input.focus();
+            if(inputId === 'regPassword') { passwordInput.dispatchEvent(new Event('input')); }
+        }
+
+        function togglePassword(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input.type === 'password') {
+                input.type = 'text'; btn.innerHTML = EYE_CLOSED_SVG;
+            } else {
+                input.type = 'password'; btn.innerHTML = EYE_OPEN_SVG;
+            }
+        }
+
+        function hidePassword(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input.type === 'text') { input.type = 'password'; btn.innerHTML = EYE_OPEN_SVG; }
+        }
+
+        function updateTimeGreeting(username) {
+            const hour = new Date().getHours();
+            let greeting = "Добрый день";
+            if (hour >= 5 && hour < 12) greeting = "Доброе утро";
+            else if (hour >= 17 && hour < 23) greeting = "Добрый вечер";
+            else if (hour >= 23 || hour < 5) greeting = "Доброй ночи";
+            
+            document.getElementById('profileGreeting').innerText = `${greeting}, ${username}`;
+        }
+
+        const passwordInput = document.getElementById('regPassword');
+        const confirmInput = document.getElementById('regPasswordConfirm');
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+        const submitBtn = document.getElementById('regSubmitBtn');
+
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[a-z]/.test(val)) score++;
+            if (/\d/.test(val)) score++;
+            if (/[@$!%*?&_#№\-+=/\\|()\[\]{}]/.test(val)) score++;
+
+            if (val.length === 0) {
+                strengthBar.style.width = '0%'; strengthText.innerText = 'Уровень защиты...'; strengthText.style.color = '#86868b';
+            } else if (score <= 2) {
+                strengthBar.style.width = '33%'; strengthBar.style.backgroundColor = '#ff3b30';
+                strengthText.innerText = 'Низкая устойчивость'; strengthText.style.color = '#ff3b30';
+            } else if (score <= 4) {
+                strengthBar.style.width = '66%'; strengthBar.style.backgroundColor = '#ff9f0a';
+                strengthText.innerText = 'Средняя надежность'; strengthText.style.color = '#ff9f0a';
+            } else if (score === 5) {
+                strengthBar.style.width = '100%'; strengthBar.style.backgroundColor = '#24b24b';
+                strengthText.innerText = 'Надежный мастер-пароль'; strengthText.style.color = '#24b24b';
+            }
+            validatePasswordsMatch();
+        });
+
+        confirmInput.addEventListener('input', validatePasswordsMatch);
+
+        function validatePasswordsMatch() {
+            const p = passwordInput.value;
+            const cp = confirmInput.value;
+            const errDiv = document.getElementById('regError');
+            if (cp.length > 0 && p !== cp) {
+                errDiv.innerText = "Пароли не совпадают."; errDiv.style.display = 'block'; submitBtn.disabled = true; return false;
+            } else {
+                errDiv.style.display = 'none'; submitBtn.disabled = false; return true;
+            }
+        }
+
+        function loginSuccess(username, token, shouldRemember) {
+            if (shouldRemember) {
+                localStorage.setItem('aeterna_token', token);
+                localStorage.setItem('aeterna_user', username);
+            } else if (shouldRemember !== undefined) {
+                sessionStorage.setItem('aeterna_token', token);
+                sessionStorage.setItem('aeterna_user', username);
+            }
+            updateTimeGreeting(username);
+            document.getElementById('landingWrapper').style.display = 'none';
+            document.getElementById('profileScreen').style.display = 'block';
+        }
+
+        function logout() {
+            localStorage.removeItem('aeterna_token'); localStorage.removeItem('aeterna_user');
+            sessionStorage.removeItem('aeterna_token'); sessionStorage.removeItem('aeterna_user');
+            document.getElementById('loginForm').reset();
+            document.getElementById('registerForm').reset();
+            document.querySelectorAll('.clear-btn').forEach(b => b.style.display = 'none');
+            strengthBar.style.width = '0%'; strengthText.innerText = 'Уровень защиты...'; strengthText.style.color = '#86868b';
+            showLandingMode();
+        }
+
+        function formatPydanticError(detail) {
+            if (Array.isArray(detail)) { return detail[0].msg.replace("Value error, ", ""); }
+            return detail;
+        }
+
+        // РЕГИСТРАЦИЯ
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validatePasswordsMatch()) return;
+
+            const btn = document.getElementById('regSubmitBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true; btn.innerText = "Авторизация...";
+
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const errDiv = document.getElementById('regError');
+            errDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    loginSuccess(result.username, result.token, true);
+                } else {
+                    errDiv.innerText = formatPydanticError(result.detail); errDiv.style.display = 'block';
+                }
+            } catch (k) {
+                errDiv.innerText = "Не удалось связаться с сервером Aeterna."; errDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.innerText = originalText;
+            }
+        });
+
+        // ВХОД
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginSubmitBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true; btn.innerText = "Синхронизация...";
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const rememberMe = document.getElementById('loginRemember').checked;
+            const errDiv = document.getElementById('loginError');
+            errDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    loginSuccess(result.username, result.token, rememberMe);
+                } else {
+                    errDiv.innerText = result.detail || "Неверные параметры доступа."; errDiv.style.display = 'block';
+                }
+            } catch (k) {
+                errDiv.innerText = "Сервер Aeterna Core не отвечает."; errDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.innerText = originalText;
+            }
+        });
+    </script>
+</body>
+</html>

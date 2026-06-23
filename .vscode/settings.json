@@ -1,0 +1,17 @@
+{
+    "sqltools.connections": [
+        {
+            "trinoOptions": {
+                "ssl": {
+                    "rejectUnauthorized": true
+                }
+            },
+            "previewLimit": 50,
+            "driver": "Trino Driver",
+            "server": "http://localhost:8080",
+            "name": "Myfreedom",
+            "catalog": "iceberg",
+            "user": "admin"
+        }
+    ]
+}
