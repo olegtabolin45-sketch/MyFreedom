@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import jwt
 import bcrypt
@@ -114,6 +115,17 @@ def decode_jwt_token(token: str) -> str:
         raise HTTPException(status_code=401, detail="Срок действия токена истек.")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Невалидный токен сессии.")
+
+# --- ОТДАЧА ФРОНТЕНДА (тот же origin, что и API — чтобы не ослаблять CORS) ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.get("/")
+async def serve_index():
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+@app.get("/dashboard.html")
+async def serve_dashboard():
+    return FileResponse(os.path.join(BASE_DIR, "dashboard.html"))
 
 # --- ЭНДПОИНТЫ API ---
 
