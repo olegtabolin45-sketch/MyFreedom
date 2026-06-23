@@ -1,8 +1,11 @@
 import os
 import time
 import re
+import logging
+import threading
+from collections import defaultdict
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -30,6 +33,10 @@ if not JWT_SECRET:
     )
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = int(os.environ.get("TOKEN_EXPIRE_MINUTES", "60"))
+
+# --- ЛОГИРОВАНИЕ (без утечки чувствительных данных клиенту) ---
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("aeterna")
 
 # Разрешённые источники для CORS (через запятую в ALLOWED_ORIGINS)
 ALLOWED_ORIGINS = [
@@ -116,6 +123,31 @@ def decode_jwt_token(token: str) -> str:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Невалидный токен сессии.")
 
+# --- RATE LIMITING (в памяти, скользящее окно) ---
+# Примечание: лимитер хранит состояние в памяти процесса. Для нескольких
+# инстансов нужен общий бэкенд (Redis) — см. ROADMAP, этап 2.
+_rate_buckets = defaultdict(list)
+_rate_lock = threading.Lock()
+
+def check_rate_limit(request: Request, scope: str, max_requests: int, window_seconds: int):
+    """Ограничивает число запросов с одного IP. Бросает 429 при превышении."""
+    client_ip = request.client.host if request.client else "unknown"
+    key = f"{scope}:{client_ip}"
+    now = time.time()
+    cutoff = now - window_seconds
+    with _rate_lock:
+        timestamps = _rate_buckets[key]
+        timestamps[:] = [t for t in timestamps if t > cutoff]
+        if len(timestamps) >= max_requests:
+            retry_after = int(window_seconds - (now - timestamps[0])) + 1
+            logger.warning("Rate limit превышен: scope=%s ip=%s", scope, client_ip)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Слишком много попыток. Пожалуйста, попробуйте позже.",
+                headers={"Retry-After": str(retry_after)}
+            )
+        timestamps.append(now)
+
 # --- ОТДАЧА ФРОНТЕНДА (тот же origin, что и API — чтобы не ослаблять CORS) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -130,7 +162,8 @@ async def serve_dashboard():
 # --- ЭНДПОИНТЫ API ---
 
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
-async def register_user(data: RegisterRequest):
+async def register_user(data: RegisterRequest, request: Request):
+    check_rate_limit(request, "register", max_requests=5, window_seconds=60)
     now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     normalized_email = data.email.lower()
 
@@ -167,7 +200,7 @@ async def register_user(data: RegisterRequest):
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"[SECURITY ALERT] Register Error: {e}")
+        logger.error("Ошибка регистрации: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Внутренняя ошибка сервера при регистрации."
@@ -175,7 +208,8 @@ async def register_user(data: RegisterRequest):
 
 
 @app.post("/api/login")
-async def login_user(data: LoginRequest):
+async def login_user(data: LoginRequest, request: Request):
+    check_rate_limit(request, "login", max_requests=10, window_seconds=60)
     normalized_email = data.email.lower()
 
     try:
@@ -215,7 +249,7 @@ async def login_user(data: LoginRequest):
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"[SECURITY ALERT] Login Error: {e}")
+        logger.error("Ошибка авторизации: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка авторизации."
@@ -246,7 +280,8 @@ async def get_user_status(token: str):
     except HTTPException as he:
         raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка проверки статуса: {str(e)}")
+        logger.error("Ошибка проверки статуса: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка проверки статуса.")
 
 
 @app.post("/api/onboarding")
@@ -285,9 +320,9 @@ async def save_onboarding(data: OnboardingRequest, token: str):
         return {"status": "success", "message": "Данные онбординга успешно сохранены в Trino."}
         
     except Exception as e:
-        print(f"[TRINO ERROR] Onboarding Save Fail: {e}")
+        logger.error("Ошибка сохранения онбординга: %s", e, exc_info=True)
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail="Ошибка записи данных конфигурации целей в Iceberg."
         )
 
