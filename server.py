@@ -4,25 +4,45 @@ import re
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import jwt
-import bcrypt  
+import bcrypt
 from trino.dbapi import connect
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # --- ОРИГИНАЛЬНЫЕ СИСТЕМНЫЕ НАСТРОЙКИ (БЛОКИРОВКА ПРОКСИ) ---
 os.environ["HTTP_PROXY"] = ""
 os.environ["HTTPS_PROXY"] = ""
 os.environ["no_proxy"] = "localhost,127.0.0.1"
 
-JWT_SECRET = "SUPER_SECRET_KEY_MY_FREEDOM_2026_PROD" 
+# --- СЕКРЕТЫ И КОНФИГУРАЦИЯ (из переменных окружения) ---
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError(
+        "Переменная окружения JWT_SECRET не задана. "
+        "Создайте файл .env (см. .env.example) с надёжным секретным ключом."
+    )
 JWT_ALGORITHM = "HS256"
-TOKEN_EXPIRE_MINUTES = 60
+TOKEN_EXPIRE_MINUTES = int(os.environ.get("TOKEN_EXPIRE_MINUTES", "60"))
+
+# Разрешённые источники для CORS (через запятую в ALLOWED_ORIGINS)
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",")
+    if origin.strip()
+]
 
 app = FastAPI(title="MyFreedom Core API", version="1.0.2")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,11 +87,7 @@ def get_trino_connection():
         host="127.0.0.1", port=8080, user="admin", catalog="iceberg", schema="demo_db"
     )
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И ЭКРАНИРОВАНИЕ ---
-def escape_sql(val: str) -> str:
-    """Экранирует одинарные кавычки для безопасной вставки в SQL-запрос Trino"""
-    return str(val).replace("'", "''")
-
+# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 def hash_password(password: str) -> str:
     password_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt(rounds=12)
@@ -100,40 +116,49 @@ def decode_jwt_token(token: str) -> str:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Невалидный токен сессии.")
 
+# --- ОТДАЧА ФРОНТЕНДА (тот же origin, что и API — чтобы не ослаблять CORS) ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.get("/")
+async def serve_index():
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+@app.get("/dashboard.html")
+async def serve_dashboard():
+    return FileResponse(os.path.join(BASE_DIR, "dashboard.html"))
+
 # --- ЭНДПОИНТЫ API ---
 
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register_user(data: RegisterRequest):
     now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     normalized_email = data.email.lower()
-    
-    # Безопасное экранирование строк
-    safe_email = escape_sql(normalized_email)
-    safe_username = escape_sql(data.username)
-    
+
     try:
         conn = get_trino_connection()
         cursor = conn.cursor()
-        
-        # Проверка дубликата
-        check_query = "SELECT email FROM iceberg.demo_db.users WHERE email = '%s'" % safe_email
-        cursor.execute(check_query)
+
+        # Проверка дубликата (параметризованный запрос)
+        cursor.execute(
+            "SELECT email FROM iceberg.demo_db.users WHERE email = ?",
+            (normalized_email,)
+        )
         if cursor.fetchone():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Аккаунт с таким Email уже существует."
             )
-        
-        hashed_password = hash_password(data.password)
-        safe_password = escape_sql(hashed_password)
 
-        # INSERT пользователя в формате строки (Trino-совместимый)
-        insert_query = """
-            INSERT INTO iceberg.demo_db.users (created_at, username, email, password_hash, is_onboarded) 
-            VALUES (TIMESTAMP '%s', '%s', '%s', '%s', false)
-        """ % (now_str, safe_username, safe_email, safe_password)
-        
-        cursor.execute(insert_query)
+        hashed_password = hash_password(data.password)
+
+        # INSERT пользователя (параметризованный запрос)
+        cursor.execute(
+            """
+            INSERT INTO iceberg.demo_db.users (created_at, username, email, password_hash, is_onboarded)
+            VALUES (CAST(? AS TIMESTAMP), ?, ?, ?, false)
+            """,
+            (now_str, data.username, normalized_email, hashed_password)
+        )
         conn.commit()
         
         token = generate_jwt_token(data.username, normalized_email)
@@ -152,14 +177,15 @@ async def register_user(data: RegisterRequest):
 @app.post("/api/login")
 async def login_user(data: LoginRequest):
     normalized_email = data.email.lower()
-    safe_email = escape_sql(normalized_email)
-    
+
     try:
         conn = get_trino_connection()
         cursor = conn.cursor()
-        
-        query = "SELECT username, password_hash, is_onboarded FROM iceberg.demo_db.users WHERE email = '%s'" % safe_email
-        cursor.execute(query)
+
+        cursor.execute(
+            "SELECT username, password_hash, is_onboarded FROM iceberg.demo_db.users WHERE email = ?",
+            (normalized_email,)
+        )
         user = cursor.fetchone()
         
         if not user:
@@ -199,14 +225,15 @@ async def login_user(data: LoginRequest):
 @app.get("/api/user/status")
 async def get_user_status(token: str):
     email = decode_jwt_token(token)
-    safe_email = escape_sql(email)
-    
+
     try:
         conn = get_trino_connection()
         cursor = conn.cursor()
-        
-        query = "SELECT username, is_onboarded FROM iceberg.demo_db.users WHERE email = '%s'" % safe_email
-        cursor.execute(query)
+
+        cursor.execute(
+            "SELECT username, is_onboarded FROM iceberg.demo_db.users WHERE email = ?",
+            (email,)
+        )
         user = cursor.fetchone()
         
         if not user:
@@ -226,32 +253,34 @@ async def get_user_status(token: str):
 async def save_onboarding(data: OnboardingRequest, token: str):
     email = decode_jwt_token(token)
     now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-    
-    safe_email = escape_sql(email)
-    safe_currency = escape_sql(data.currency)
-    safe_risk = escape_sql(data.risk_profile)
-    
+
     try:
         conn = get_trino_connection()
         cursor = conn.cursor()
-        
+
         # 1. Очистка старых целей (эмуляция REPLACE)
-        delete_goals = "DELETE FROM iceberg.demo_db.user_goals WHERE email = '%s'" % safe_email
-        cursor.execute(delete_goals)
-        
-        # 2. Чистый INSERT
-        insert_goals = """
-            INSERT INTO iceberg.demo_db.user_goals 
+        cursor.execute(
+            "DELETE FROM iceberg.demo_db.user_goals WHERE email = ?",
+            (email,)
+        )
+
+        # 2. Чистый INSERT (параметризованный запрос)
+        cursor.execute(
+            """
+            INSERT INTO iceberg.demo_db.user_goals
             (email, currency, initial_capital, monthly_deposit, target_income, years_horizon, risk_profile, updated_at)
-            VALUES ('%s', '%s', %f, %f, %f, %d, '%s', TIMESTAMP '%s')
-        """ % (safe_email, safe_currency, data.initial_capital, data.monthly_deposit, 
-               data.target_income, data.years_horizon, safe_risk, now_str)
-        cursor.execute(insert_goals)
-        
+            VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS TIMESTAMP))
+            """,
+            (email, data.currency, data.initial_capital, data.monthly_deposit,
+             data.target_income, data.years_horizon, data.risk_profile, now_str)
+        )
+
         # 3. Обновление флага в users
-        update_user = "UPDATE iceberg.demo_db.users SET is_onboarded = true WHERE email = '%s'" % safe_email
-        cursor.execute(update_user)
-        
+        cursor.execute(
+            "UPDATE iceberg.demo_db.users SET is_onboarded = true WHERE email = ?",
+            (email,)
+        )
+
         conn.commit()
         return {"status": "success", "message": "Данные онбординга успешно сохранены в Trino."}
         
