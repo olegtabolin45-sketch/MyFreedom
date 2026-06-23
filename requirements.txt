@@ -3,5 +3,6 @@ uvicorn
 bcrypt==4.0.1
 pyjwt
 trino
+pg8000
 pydantic[email]
 python-dotenv
