@@ -29,12 +29,12 @@
 
 ## 🏗️ Этап 1 — Фундамент архитектуры
 
-- [ ] Разделить монолит `server.py` на модули: `routers/`, `models/`, `schemas/`, `services/`, `db/`, `core/`
-- [ ] Подключить PostgreSQL + миграции (Alembic)
-- [ ] Файл зависимостей `requirements.txt` (зафиксировать версии: `bcrypt==4.0.1` и т.д.)
-- [ ] Конфигурация через `pydantic-settings` + `.env`
+- [x] Разделить монолит `server.py` на модули. ✅ Пакет `app/`: `config`, `db`, `security`, `rate_limit`, `schemas`, `logging_config`, `routers/` (frontend, auth, users). `server.py` — тонкая точка входа.
+- [ ] Подключить PostgreSQL + миграции (Alembic) — PostgreSQL ✅ подключён, осталась интеграция Alembic.
+- [x] Файл зависимостей `requirements.txt`. ✅ (`bcrypt==4.0.1`, pg8000 и др.)
+- [x] Централизованная конфигурация из `.env`. ✅ Модуль `app/config.py` (pydantic-settings — опционально позже).
 - [ ] Docker + `docker-compose.yml` (app + postgres + trino + redis)
-- [ ] Структурированное логирование (`structlog` / `loguru`)
+- [x] Логирование. ✅ Модуль `app/logging_config.py` (structlog/loguru — улучшение позже).
 
 ## 🔐 Этап 2 — Безопасность (углублённо)
 
