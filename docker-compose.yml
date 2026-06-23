@@ -16,8 +16,6 @@ services:
       - "5433:5432"
     volumes:
       - aeterna_pgdata:/var/lib/postgresql/data
-      # Схема применяется автоматически при первом создании базы
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-aeterna} -d ${DB_NAME:-aeterna}"]
       interval: 5s
@@ -39,6 +37,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-aeterna_local_pwd}
     ports:
       - "8000:8000"
+    # Сначала применяем миграции Alembic, затем запускаем приложение
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     depends_on:
       db:
         condition: service_healthy

@@ -21,7 +21,7 @@
 - [x] **SQL-инъекции.** ✅ Все запросы переведены на параметризованные (`cursor.execute(query, params)`), `escape_sql` удалена.
 - [x] **Секреты в коде.** ✅ `JWT_SECRET` вынесен в переменные окружения, `.env` в `.gitignore`, есть `.env.example`.
 - [x] **CORS.** ✅ Ограничен списком `ALLOWED_ORIGINS`; фронтенд отдаётся с того же origin, что и API.
-- [x] **Trino — не для пользователей.** ✅ Пользователи и цели перенесены в **PostgreSQL** (драйвер pg8000, контейнер `aeterna-db`, схема в `schema.sql`). Trino зарезервирован для аналитики капитала (этап 4).
+- [x] **Trino — не для пользователей.** ✅ Пользователи и цели перенесены в **PostgreSQL** (драйвер pg8000, контейнер `aeterna-db`, схема — миграции Alembic). Trino зарезервирован для аналитики капитала (этап 4).
 - [x] **Нет rate limiting.** ✅ Добавлен лимитер для register/login (в памяти; Redis-вариант — этап 2).
 - [x] **Логи с чувствительными данными.** ✅ Переход на `logging`, убрана утечка деталей ошибок клиенту.
 
@@ -30,7 +30,7 @@
 ## 🏗️ Этап 1 — Фундамент архитектуры
 
 - [x] Разделить монолит `server.py` на модули. ✅ Пакет `app/`: `config`, `db`, `security`, `rate_limit`, `schemas`, `logging_config`, `routers/` (frontend, auth, users). `server.py` — тонкая точка входа.
-- [ ] Подключить PostgreSQL + миграции (Alembic) — PostgreSQL ✅ подключён, осталась интеграция Alembic.
+- [x] Подключить PostgreSQL + миграции (Alembic). ✅ PostgreSQL подключён; Alembic (через pg8000) с начальной миграцией `0001`, применяется автоматически при старте контейнера.
 - [x] Файл зависимостей `requirements.txt`. ✅ (`bcrypt==4.0.1`, pg8000 и др.)
 - [x] Централизованная конфигурация из `.env`. ✅ Модуль `app/config.py` (pydantic-settings — опционально позже).
 - [x] Docker + `docker-compose.yml`. ✅ `Dockerfile` + compose (app + postgres, схема применяется автоматически). Trino/redis добавим на соответствующих этапах.
