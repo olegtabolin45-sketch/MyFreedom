@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.venv
+venv
+__pycache__
+*.pyc
+.vscode
+.idea
+datalake_raw
+*.md
+Adminka.txt
+*.session.sql
