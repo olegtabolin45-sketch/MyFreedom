@@ -33,7 +33,7 @@
 - [ ] Подключить PostgreSQL + миграции (Alembic) — PostgreSQL ✅ подключён, осталась интеграция Alembic.
 - [x] Файл зависимостей `requirements.txt`. ✅ (`bcrypt==4.0.1`, pg8000 и др.)
 - [x] Централизованная конфигурация из `.env`. ✅ Модуль `app/config.py` (pydantic-settings — опционально позже).
-- [ ] Docker + `docker-compose.yml` (app + postgres + trino + redis)
+- [x] Docker + `docker-compose.yml`. ✅ `Dockerfile` + compose (app + postgres, схема применяется автоматически). Trino/redis добавим на соответствующих этапах.
 - [x] Логирование. ✅ Модуль `app/logging_config.py` (structlog/loguru — улучшение позже).
 
 ## 🔐 Этап 2 — Безопасность (углублённо)

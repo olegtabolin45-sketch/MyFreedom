@@ -1,0 +1,47 @@
+# Поднимает приложение + PostgreSQL одной командой:
+#   docker compose up -d --build
+#
+# Требует файл .env с JWT_SECRET (см. .env.example).
+# Trino/Iceberg для аналитики разворачиваются отдельно (этап 4 ROADMAP).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aeterna-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-aeterna}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-aeterna_local_pwd}
+      POSTGRES_DB: ${DB_NAME:-aeterna}
+    ports:
+      - "5433:5432"
+    volumes:
+      - aeterna_pgdata:/var/lib/postgresql/data
+      # Схема применяется автоматически при первом создании базы
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-aeterna} -d ${DB_NAME:-aeterna}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    container_name: aeterna-app
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      TOKEN_EXPIRE_MINUTES: ${TOKEN_EXPIRE_MINUTES:-60}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://127.0.0.1:8000,http://localhost:8000}
+      # Внутри docker-сети ходим к сервису db по имени и внутреннему порту 5432
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-aeterna}
+      DB_USER: ${DB_USER:-aeterna}
+      DB_PASSWORD: ${DB_PASSWORD:-aeterna_local_pwd}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  aeterna_pgdata:
