@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import jwt
 import bcrypt
-from trino.dbapi import connect
+import pg8000.dbapi
 
 try:
     from dotenv import load_dotenv
@@ -88,8 +88,19 @@ class OnboardingRequest(BaseModel):
     years_horizon: int = Field(..., gt=0)
     risk_profile: str
 
-# --- ТВОИ ОРИГИНАЛЬНЫЕ НАСТРОЙКИ ПОДКЛЮЧЕНИЯ К TRINO ---
+# --- ПОДКЛЮЧЕНИЕ К POSTGRESQL (пользователи, сессии, цели) ---
+def get_db_connection():
+    return pg8000.dbapi.connect(
+        host=os.environ.get("DB_HOST", "127.0.0.1"),
+        port=int(os.environ.get("DB_PORT", "5433")),
+        database=os.environ.get("DB_NAME", "aeterna"),
+        user=os.environ.get("DB_USER", "aeterna"),
+        password=os.environ.get("DB_PASSWORD", ""),
+    )
+
+# --- ПОДКЛЮЧЕНИЕ К TRINO (зарезервировано для аналитики капитала, см. ROADMAP, этап 4) ---
 def get_trino_connection():
+    from trino.dbapi import connect
     return connect(
         host="127.0.0.1", port=8080, user="admin", catalog="iceberg", schema="demo_db"
     )
@@ -164,16 +175,16 @@ async def serve_dashboard():
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register_user(data: RegisterRequest, request: Request):
     check_rate_limit(request, "register", max_requests=5, window_seconds=60)
-    now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     normalized_email = data.email.lower()
 
+    conn = None
     try:
-        conn = get_trino_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Проверка дубликата (параметризованный запрос)
         cursor.execute(
-            "SELECT email FROM iceberg.demo_db.users WHERE email = ?",
+            "SELECT email FROM users WHERE email = %s",
             (normalized_email,)
         )
         if cursor.fetchone():
@@ -184,19 +195,19 @@ async def register_user(data: RegisterRequest, request: Request):
 
         hashed_password = hash_password(data.password)
 
-        # INSERT пользователя (параметризованный запрос)
+        # INSERT пользователя (created_at проставляется БД по умолчанию)
         cursor.execute(
             """
-            INSERT INTO iceberg.demo_db.users (created_at, username, email, password_hash, is_onboarded)
-            VALUES (CAST(? AS TIMESTAMP), ?, ?, ?, false)
+            INSERT INTO users (username, email, password_hash, is_onboarded)
+            VALUES (%s, %s, %s, false)
             """,
-            (now_str, data.username, normalized_email, hashed_password)
+            (data.username, normalized_email, hashed_password)
         )
         conn.commit()
-        
+
         token = generate_jwt_token(data.username, normalized_email)
         return {"status": "success", "token": token, "username": data.username, "is_onboarded": False}
-        
+
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -205,6 +216,9 @@ async def register_user(data: RegisterRequest, request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Внутренняя ошибка сервера при регистрации."
         )
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @app.post("/api/login")
@@ -212,16 +226,17 @@ async def login_user(data: LoginRequest, request: Request):
     check_rate_limit(request, "login", max_requests=10, window_seconds=60)
     normalized_email = data.email.lower()
 
+    conn = None
     try:
-        conn = get_trino_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT username, password_hash, is_onboarded FROM iceberg.demo_db.users WHERE email = ?",
+            "SELECT username, password_hash, is_onboarded FROM users WHERE email = %s",
             (normalized_email,)
         )
         user = cursor.fetchone()
-        
+
         if not user:
             fake_salt = b'$2b$12$L7RMD8clNRE1bepshLrrUu'
             bcrypt.hashpw(data.password.encode('utf-8'), fake_salt)
@@ -229,23 +244,23 @@ async def login_user(data: LoginRequest, request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Неверный адрес электронной почты или пароль."
             )
-            
+
         username, db_hashed_password, is_onboarded = user[0], user[1], user[2]
-        
+
         if not verify_password(data.password, db_hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Неверный адрес электронной почты или пароль."
             )
-            
+
         token = generate_jwt_token(username, normalized_email)
         return {
-            "status": "success", 
-            "token": token, 
-            "username": username, 
+            "status": "success",
+            "token": token,
+            "username": username,
             "is_onboarded": bool(is_onboarded)
         }
-        
+
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -254,25 +269,29 @@ async def login_user(data: LoginRequest, request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка авторизации."
         )
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @app.get("/api/user/status")
 async def get_user_status(token: str):
     email = decode_jwt_token(token)
 
+    conn = None
     try:
-        conn = get_trino_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT username, is_onboarded FROM iceberg.demo_db.users WHERE email = ?",
+            "SELECT username, is_onboarded FROM users WHERE email = %s",
             (email,)
         )
         user = cursor.fetchone()
-        
+
         if not user:
             raise HTTPException(status_code=404, detail="Пользователь не найден.")
-            
+
         return {
             "username": user[0],
             "is_onboarded": bool(user[1])
@@ -282,49 +301,57 @@ async def get_user_status(token: str):
     except Exception as e:
         logger.error("Ошибка проверки статуса: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка проверки статуса.")
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @app.post("/api/onboarding")
 async def save_onboarding(data: OnboardingRequest, token: str):
     email = decode_jwt_token(token)
-    now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
+    conn = None
     try:
-        conn = get_trino_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # 1. Очистка старых целей (эмуляция REPLACE)
         cursor.execute(
-            "DELETE FROM iceberg.demo_db.user_goals WHERE email = ?",
+            "DELETE FROM user_goals WHERE email = %s",
             (email,)
         )
 
-        # 2. Чистый INSERT (параметризованный запрос)
+        # 2. Чистый INSERT (updated_at проставляется БД по умолчанию)
         cursor.execute(
             """
-            INSERT INTO iceberg.demo_db.user_goals
-            (email, currency, initial_capital, monthly_deposit, target_income, years_horizon, risk_profile, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS TIMESTAMP))
+            INSERT INTO user_goals
+            (email, currency, initial_capital, monthly_deposit, target_income, years_horizon, risk_profile)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (email, data.currency, data.initial_capital, data.monthly_deposit,
-             data.target_income, data.years_horizon, data.risk_profile, now_str)
+             data.target_income, data.years_horizon, data.risk_profile)
         )
 
         # 3. Обновление флага в users
         cursor.execute(
-            "UPDATE iceberg.demo_db.users SET is_onboarded = true WHERE email = ?",
+            "UPDATE users SET is_onboarded = true WHERE email = %s",
             (email,)
         )
 
         conn.commit()
-        return {"status": "success", "message": "Данные онбординга успешно сохранены в Trino."}
-        
+        return {"status": "success", "message": "Данные онбординга успешно сохранены."}
+
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error("Ошибка сохранения онбординга: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="Ошибка записи данных конфигурации целей в Iceberg."
+            detail="Ошибка записи данных конфигурации целей."
         )
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 if __name__ == "__main__":
