@@ -214,9 +214,9 @@
         .ob-progress-fill { height: 100%; width: 0%; background: #1d1d1f; border-radius: 2px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 
         /* Сцена с вопросами */
-        .ob-stage { position: relative; min-height: 184px; }
+        .ob-stage { position: relative; min-height: 184px; transition: min-height 0.42s cubic-bezier(0.16, 1, 0.3, 1); }
         .ob-step {
-            position: absolute; inset: 0;
+            position: absolute; top: 0; left: 0; right: 0;
             opacity: 0; transform: translateX(40px); pointer-events: none;
             transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1), transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -257,6 +257,148 @@
         .ob-next:hover { background: #000000; }
         .ob-next:active, .ob-back:active { transform: scale(0.99); }
         .ob-next:disabled { background: #f5f5f7; color: #d2d2d7; cursor: not-allowed; transform: none; }
+
+        /* Выбор стран проживания (мультивыбор) */
+        .ob-countries { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ob-country {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 14px; border: 1px solid #d2d2d7; border-radius: 12px;
+            font-size: 15px; color: #1d1d1f; cursor: pointer; user-select: none;
+            transition: all 0.18s ease; background: #fff;
+        }
+        .ob-country:hover { border-color: #86868b; }
+        .ob-country .flag { font-size: 18px; line-height: 1; }
+        .ob-country.selected { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+        .ob-country.disabled { opacity: 0.4; cursor: not-allowed; }
+        .ob-countries-hint { margin-top: 14px; font-size: 13px; color: #86868b; }
+
+        /* ===== Личный кабинет (дашборд) ===== */
+        .dash { max-width: 1000px; margin: 32px auto 64px; padding: 0 24px; width: 100%; }
+        @keyframes dashIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal { opacity: 0; animation: dashIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* Шапка профиля */
+        .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+        .dash-profile { display: flex; align-items: center; gap: 16px; }
+        .dash-avatar {
+            width: 56px; height: 56px; border-radius: 16px; background: #1d1d1f; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
+        }
+        .dash-hello { font-size: 22px; font-weight: 700; color: #1d1d1f; line-height: 1.2; }
+        .dash-sub { font-size: 14px; color: #86868b; margin-top: 2px; }
+        .dash-sub .dot-sep { margin: 0 8px; color: #d2d2d7; }
+        .dash-logout {
+            background: #fff; color: #515154; border: 1px solid #d2d2d7; border-radius: 10px;
+            height: 42px; padding: 0 18px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+        }
+        .dash-logout:hover { background: #f5f5f7; border-color: #86868b; color: #1d1d1f; }
+
+        /* KPI-карточки */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+        .kpi-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 18px 20px; transition: all 0.25s ease; }
+        .kpi-card:hover { border-color: #1d1d1f; box-shadow: 0 8px 24px rgba(0,0,0,0.04); transform: translateY(-2px); }
+        .kpi-label { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #86868b; margin-bottom: 10px; }
+        .kpi-value { font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .kpi-unit { font-size: 14px; color: #86868b; font-weight: 500; margin-left: 3px; }
+
+        /* Основной блок: график + кольцо */
+        .dash-main { display: grid; grid-template-columns: 1.7fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .dash-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 24px; }
+        .dash-card-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
+        .dash-card-hint { font-size: 13px; color: #86868b; margin-top: 2px; margin-bottom: 16px; }
+        .chart-wrap { width: 100%; }
+        .chart-wrap svg { width: 100%; height: auto; display: block; }
+
+        /* Кольцо достижения */
+        .donut-card { display: flex; flex-direction: column; }
+        .donut-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+        .donut-center { position: absolute; text-align: center; }
+        .donut-pct { font-size: 34px; font-weight: 700; color: #1d1d1f; }
+        .donut-cap { font-size: 12px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .donut-ring { transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Прогноз итог */
+        .forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .forecast-card { background: #fafafa; border: 1px solid #e5e5ea; border-radius: 16px; padding: 22px 24px; }
+        .forecast-card.accent { background: #1d1d1f; border-color: #1d1d1f; }
+        .forecast-card.accent .kpi-label { color: #a1a1a6; }
+        .forecast-card.accent .forecast-value { color: #fff; }
+        .forecast-value { font-size: 28px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .risk-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+        .risk-conservative { background: #eef6ff; color: #2b6fd6; }
+        .risk-moderate { background: #f2fbf4; color: #24b24b; }
+        .risk-aggressive { background: #fff2f0; color: #ff5a4d; }
+
+        /* Вкладки профиля */
+        .dash-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e5ea; margin-bottom: 24px; }
+        .dash-tab {
+            padding: 12px 22px; font-size: 15px; font-weight: 500; color: #86868b;
+            cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent;
+            margin-bottom: -1px; transition: all 0.2s ease;
+        }
+        .dash-tab:hover { color: #1d1d1f; }
+        .dash-tab.active { color: #1d1d1f; border-bottom-color: #1d1d1f; font-weight: 600; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: dashIn 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Метрики портфеля (вкладка «Общее») */
+        .pf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+        .pf-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 22px 24px; }
+        .pf-head { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+        .pf-label { font-size: 13px; font-weight: 600; color: #515154; }
+        .pf-info {
+            width: 16px; height: 16px; border-radius: 50%; background: #e5e5ea; color: #86868b;
+            font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+            cursor: help; flex-shrink: 0;
+        }
+        .pf-value { font-size: 28px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .pf-value.muted { color: #c7c7cc; }
+        .pf-sub { font-size: 13px; color: #86868b; margin-top: 6px; }
+        .pf-pos { color: #24b24b; } .pf-neg { color: #ff3b30; }
+
+        /* Пустое состояние портфеля */
+        .pf-empty { background: #fafafa; border: 1px dashed #d2d2d7; border-radius: 16px; padding: 40px 24px; text-align: center; }
+        .pf-empty h3 { font-size: 18px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
+        .pf-empty p { font-size: 14px; color: #86868b; line-height: 1.5; max-width: 440px; margin: 0 auto 20px; }
+        .pf-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .btn-pf-primary { height: 46px; padding: 0 22px; background: #1d1d1f; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .btn-pf-primary:hover { background: #000; }
+        .btn-pf-secondary { height: 46px; padding: 0 22px; background: #fff; color: #1d1d1f; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .btn-pf-secondary:hover { background: #f5f5f7; border-color: #86868b; }
+        .pf-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 16px; }
+        .tab-goal-actions { margin-top: 8px; }
+
+        /* Баннер утверждения цели */
+        .approve-banner {
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            background: #fffaf0; border: 1px solid #ffe3a3; border-radius: 16px;
+            padding: 18px 22px; margin-bottom: 16px;
+        }
+        .approve-banner.approved { background: #f2fbf4; border-color: #cdeed5; }
+        .approve-text { font-size: 14px; color: #515154; line-height: 1.5; }
+        .approve-text b { color: #1d1d1f; }
+        .approve-actions { display: flex; gap: 10px; flex-shrink: 0; }
+        .btn-approve { height: 44px; padding: 0 20px; background: #1d1d1f; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+        .btn-approve:hover { background: #000; }
+        .btn-approve:disabled { background: #f5f5f7; color: #d2d2d7; cursor: default; }
+        .btn-edit { height: 44px; padding: 0 18px; background: #fff; color: #515154; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+        .btn-edit:hover { background: #f5f5f7; border-color: #86868b; color: #1d1d1f; }
+        .approve-done { display: inline-flex; align-items: center; gap: 8px; color: #24b24b; font-size: 14px; font-weight: 600; }
+
+        /* График покупательной способности */
+        .pp-card { margin-bottom: 16px; }
+        .pp-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+        .pp-legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: #515154; }
+        .pp-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+        .pp-legend-infl { color: #86868b; }
+        .chart-axis-label { fill: #86868b; font-size: 11px; }
+
+        @media (max-width: 860px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .dash-main { grid-template-columns: 1fr; }
+            .forecast-grid { grid-template-columns: 1fr; }
+            .approve-banner { flex-direction: column; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
@@ -350,32 +492,159 @@
         </div>
     </div>
 
-    <!-- АВТОРИЗОВАННАЯ ЗОНА -->
-    <div class="card-container welcome-container authorized-mode" id="profileScreen">
-        <div class="status-pill"><span class="status-dot"></span>Сессия активна</div>
-        <h1 id="profileGreeting">Приветствуем, инвестор</h1>
-        <div class="subtitle">Панель управления распределенным портфелем активов.</div>
-        
-        <div class="welcome-grid">
-            <div class="dashboard-card" onclick="alert('Переход к учету транзакций...')">
-                <h3>Мультивалютный портфель</h3>
-                <p>Аналитика позиций: расчет средней цены, сплиты акций и точный учет комиссий.</p>
+    <!-- ЛИЧНЫЙ КАБИНЕТ (ДАШБОРД) -->
+    <div class="dash authorized-mode" id="profileScreen">
+
+        <div class="dash-header reveal" style="animation-delay: 0.02s;">
+            <div class="dash-profile">
+                <div class="dash-avatar" id="dashAvatar">A</div>
+                <div>
+                    <div class="dash-hello" id="profileGreeting">Приветствуем, инвестор</div>
+                    <div class="dash-sub" id="dashProfileSub">Финансовая стратегия</div>
+                </div>
             </div>
-            <div class="dashboard-card" onclick="alert('Открытие календаря выплат...')">
-                <h3>Календарь доходов</h3>
-                <p>Прогнозирование купонов, дивидендов и расчет чистой прибыли с учетом налогов.</p>
+            <button class="dash-logout" onclick="logout()">Выйти</button>
+        </div>
+
+        <!-- Баннер утверждения цели -->
+        <div class="approve-banner reveal" id="approveBanner" style="animation-delay: 0.04s; display: none;">
+            <div class="approve-text" id="approveText">
+                Это <b>предварительный расчёт</b>. Если цель выглядит реалистичной — утвердите её. Иначе вернитесь и измените ответы.
             </div>
-            <div class="dashboard-card" onclick="alert('Запуск бенчмаркинга...')">
-                <h3>Бенчмаркинг</h3>
-                <p>Сравнение доходности вашего капитала (TWR/MWR) с мировыми индексами.</p>
-            </div>
-            <div class="dashboard-card" onclick="alert('Открытие настроек приватности...')">
-                <h3>Экспорт и приватность</h3>
-                <p>Полный контроль над конфиденциальностью данных и экспорт отчетов.</p>
+            <div class="approve-actions" id="approveActions">
+                <button class="btn-edit" onclick="showOnboarding()">Изменить ответы</button>
+                <button class="btn-approve" id="approveBtn" onclick="approveGoal()">Утвердить цель</button>
             </div>
         </div>
 
-        <button class="btn-submit btn-logout" onclick="logout()">Завершить сессию</button>
+        <!-- Вкладки (появляются после утверждения цели) -->
+        <div class="dash-tabs" id="dashTabs" style="display: none;">
+            <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
+            <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
+        </div>
+
+        <!-- ВКЛАДКА «ОБЩЕЕ»: портфель -->
+        <div class="tab-panel" id="tabGeneral">
+            <div class="pf-grid">
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Текущая стоимость портфеля</span>
+                        <span class="pf-info" title="Вложено — сумма покупок всех текущих (непроданных) активов плюс свободная валюта. Текущая цена активов обновляется раз в 30 минут во время работы биржи. По иностранным активам берётся цена с зарубежных бирж (NYSE, NASDAQ, LSE…), источник курсов валют — FOREX.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfValue">— ₽</div>
+                    <div class="pf-sub" id="pfInvested">Вложено: —</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Прибыль</span>
+                        <span class="pf-info" title="Прибыль с учётом начислений, продаж, уплаченной комиссии и налогов с дивидендов за всё время существования портфеля. Нижнее значение — прибыль только от изменения цены активов за последний день работы биржи.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfProfit">— ₽</div>
+                    <div class="pf-sub" id="pfProfitDay">За день: —</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Доходность (XIRR)</span>
+                        <span class="pf-info" title="Среднегодовая доходность портфеля по формуле «Доходность портфеля с переменной суммой инвестиций» (XIRR). Учитываются все движения по бумагам — покупки, продажи, дивиденды, налог с дивидендов, комиссии.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfXirr">— %</div>
+                    <div class="pf-sub">Среднегодовая</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Пассивный доход</span>
+                        <span class="pf-info" title="Доход с выплаты дивидендов и купонов за будущие 12 месяцев. Только регулярные выплаты (без спецдивидендов, амортизаций и погашений). Доходность (%) к текущей стоимости активов (без учёта валюты). Все суммы — после вычета налога 13%.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfIncome">— ₽</div>
+                    <div class="pf-sub" id="pfIncomeYield">— % к стоимости активов</div>
+                </div>
+            </div>
+
+            <!-- Пустое состояние: портфель ещё не наполнен -->
+            <div class="pf-empty">
+                <h3>Портфель пока пуст</h3>
+                <p>Добавьте активы вручную или подключите брокера по API — и мы автоматически подтянем сделки, текущие цены с биржи и рассчитаем доходность.</p>
+                <div class="pf-empty-actions">
+                    <button class="btn-pf-primary" onclick="alert('Подключение брокера по API — в разработке (Этап 4).')">Подключить брокера</button>
+                    <button class="btn-pf-secondary" onclick="alert('Ручное добавление сделок — в разработке (Этап 4).')">Добавить сделку вручную</button>
+                </div>
+                <div class="pf-note">Цены активов обновляются раз в 30 минут во время работы биржи. Иностранные активы — по ценам NYSE / NASDAQ / LSE, курсы валют — FOREX. Все суммы указаны после вычета налога 13%.</div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА «ЦЕЛЬ»: стратегия и прогнозы -->
+        <div class="tab-panel" id="tabGoal">
+
+        <!-- KPI -->
+        <div class="kpi-grid">
+            <div class="kpi-card reveal" style="animation-delay: 0.06s;">
+                <div class="kpi-label">Стартовый капитал</div>
+                <div class="kpi-value"><span id="kpiInitial">0</span><span class="kpi-unit" id="kpiCur1">₽</span></div>
+            </div>
+            <div class="kpi-card reveal" style="animation-delay: 0.12s;">
+                <div class="kpi-label">Пополнение / мес</div>
+                <div class="kpi-value"><span id="kpiMonthly">0</span><span class="kpi-unit" id="kpiCur2">₽</span></div>
+            </div>
+            <div class="kpi-card reveal" style="animation-delay: 0.18s;">
+                <div class="kpi-label">Цель дохода / мес</div>
+                <div class="kpi-value"><span id="kpiTarget">0</span><span class="kpi-unit" id="kpiCur3">₽</span></div>
+            </div>
+            <div class="kpi-card reveal" style="animation-delay: 0.24s;">
+                <div class="kpi-label">Горизонт</div>
+                <div class="kpi-value"><span id="kpiHorizon">0</span><span class="kpi-unit">лет</span></div>
+            </div>
+        </div>
+
+        <!-- График роста + кольцо достижения -->
+        <div class="dash-main">
+            <div class="dash-card reveal" style="animation-delay: 0.30s;">
+                <div class="dash-card-title">Прогноз роста капитала</div>
+                <div class="dash-card-hint" id="chartHint">Накопление с учётом сложного процента</div>
+                <div class="chart-wrap" id="chartWrap"></div>
+            </div>
+            <div class="dash-card donut-card reveal" style="animation-delay: 0.36s;">
+                <div class="dash-card-title">Достижение цели</div>
+                <div class="dash-card-hint">Прогноз против целевого капитала</div>
+                <div class="donut-wrap">
+                    <svg width="200" height="200" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#ececed" stroke-width="18"/>
+                        <circle id="donutRing" class="donut-ring" cx="100" cy="100" r="80" fill="none"
+                                stroke="#24b24b" stroke-width="18" stroke-linecap="round"
+                                stroke-dasharray="502.65" stroke-dashoffset="502.65"/>
+                    </svg>
+                    <div class="donut-center">
+                        <div class="donut-pct"><span id="donutPct">0</span>%</div>
+                        <div class="donut-cap">к цели</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Прогноз итог -->
+        <div class="forecast-grid">
+            <div class="forecast-card accent reveal" style="animation-delay: 0.42s;">
+                <div class="kpi-label">Прогноз капитала через <span id="fcYears">0</span> лет</div>
+                <div class="forecast-value"><span id="fcCapital">0</span><span class="kpi-unit" id="kpiCur4">₽</span></div>
+            </div>
+            <div class="forecast-card reveal" style="animation-delay: 0.48s;">
+                <div class="kpi-label">Целевой капитал (правило 4%)</div>
+                <div class="forecast-value"><span id="fcTarget">0</span><span class="kpi-unit" id="kpiCur5">₽</span></div>
+            </div>
+        </div>
+
+        <!-- Реальная покупательная способность по странам -->
+        <div class="dash-card pp-card reveal" style="animation-delay: 0.54s; margin-top: 16px;">
+            <div class="dash-card-title">Реальный пассивный доход</div>
+            <div class="dash-card-hint" id="ppHint">Сколько ваш целевой доход будет стоить в сегодняшних деньгах с учётом инфляции в выбранных странах</div>
+            <div class="chart-wrap" id="ppChartWrap"></div>
+            <div class="pp-legend" id="ppLegend"></div>
+        </div>
+
+        <div class="tab-goal-actions" id="tabGoalActions" style="display: none; margin-top: 16px;">
+            <button class="btn-edit" onclick="showOnboarding()">Изменить цель</button>
+        </div>
+
+        </div><!-- /tabGoal -->
     </div>
 
     <!-- ОНБОРДИНГ: пошаговый wizard -->
@@ -446,6 +715,13 @@
                     <div class="ob-question">За сколько лет хотите прийти к цели?</div>
                     <div class="ob-help">Горизонт планирования в годах — от 1 до 120.</div>
                     <input type="number" id="obHorizon" placeholder="например, 15" min="1" max="120" inputmode="numeric">
+                </div>
+
+                <div class="ob-step" data-title="Проживание">
+                    <div class="ob-question">Где планируете жить на пассивном доходе?</div>
+                    <div class="ob-help">Выберите до 3 стран — учтём прогноз инфляции для покупательной способности.</div>
+                    <div class="ob-countries" id="obCountries"></div>
+                    <div class="ob-countries-hint" id="obCountriesHint">Выбрано: 0 из 3</div>
                 </div>
 
             </div>
@@ -624,6 +900,11 @@
         function showProfile() {
             document.getElementById('onboardingScreen').style.display = 'none';
             document.getElementById('profileScreen').style.display = 'block';
+            // Перезапуск reveal-анимаций
+            document.querySelectorAll('#profileScreen .reveal').forEach(el => {
+                el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+            });
+            loadDashboard();
         }
 
         function showOnboarding() {
@@ -751,8 +1032,62 @@
         const obErr = document.getElementById('obError');
         let obIndex = 0;
 
-        // Поле, требующее ввода на каждом шаге (null — select, всегда валиден)
-        const obStepFields = [null, null, 'obInitial', 'obMonthly', 'obTarget', 'obHorizon'];
+        // Поле, требующее ввода на каждом шаге (null — select, всегда валиден; 'countries' — мультивыбор)
+        const obStepFields = [null, null, 'obInitial', 'obMonthly', 'obTarget', 'obHorizon', 'countries'];
+
+        // Справочник стран с прогнозной средней инфляцией (% в год)
+        const COUNTRIES = [
+            { code: 'RU', name: 'Россия', flag: '🇷🇺', infl: 6.5 },
+            { code: 'US', name: 'США', flag: '🇺🇸', infl: 2.4 },
+            { code: 'DE', name: 'Германия', flag: '🇩🇪', infl: 2.2 },
+            { code: 'GB', name: 'Великобритания', flag: '🇬🇧', infl: 2.5 },
+            { code: 'CH', name: 'Швейцария', flag: '🇨🇭', infl: 1.2 },
+            { code: 'AE', name: 'ОАЭ', flag: '🇦🇪', infl: 2.5 },
+            { code: 'TR', name: 'Турция', flag: '🇹🇷', infl: 28.0 },
+            { code: 'KZ', name: 'Казахстан', flag: '🇰🇿', infl: 8.5 },
+            { code: 'GE', name: 'Грузия', flag: '🇬🇪', infl: 3.0 },
+            { code: 'TH', name: 'Таиланд', flag: '🇹🇭', infl: 1.8 },
+            { code: 'ES', name: 'Испания', flag: '🇪🇸', infl: 2.2 },
+            { code: 'CY', name: 'Кипр', flag: '🇨🇾', infl: 2.2 },
+            { code: 'RS', name: 'Сербия', flag: '🇷🇸', infl: 4.5 },
+            { code: 'ME', name: 'Черногория', flag: '🇲🇪', infl: 3.5 },
+            { code: 'PT', name: 'Португалия', flag: '🇵🇹', infl: 2.3 }
+        ];
+        const COUNTRY_BY_CODE = Object.fromEntries(COUNTRIES.map(c => [c.code, c]));
+        const MAX_COUNTRIES = 3;
+        let obSelectedCountries = [];
+
+        function renderCountryChips() {
+            const wrap = document.getElementById('obCountries');
+            wrap.innerHTML = COUNTRIES.map(c =>
+                `<div class="ob-country" data-code="${c.code}"><span class="flag">${c.flag}</span>${c.name}</div>`
+            ).join('');
+            wrap.querySelectorAll('.ob-country').forEach(chip => {
+                chip.addEventListener('click', () => toggleCountry(chip.dataset.code));
+            });
+            updateCountryChips();
+        }
+
+        function toggleCountry(code) {
+            const i = obSelectedCountries.indexOf(code);
+            if (i >= 0) {
+                obSelectedCountries.splice(i, 1);
+            } else if (obSelectedCountries.length < MAX_COUNTRIES) {
+                obSelectedCountries.push(code);
+            }
+            updateCountryChips();
+        }
+
+        function updateCountryChips() {
+            const atMax = obSelectedCountries.length >= MAX_COUNTRIES;
+            document.querySelectorAll('#obCountries .ob-country').forEach(chip => {
+                const sel = obSelectedCountries.includes(chip.dataset.code);
+                chip.classList.toggle('selected', sel);
+                chip.classList.toggle('disabled', !sel && atMax);
+            });
+            document.getElementById('obCountriesHint').innerText =
+                `Выбрано: ${obSelectedCountries.length} из ${MAX_COUNTRIES}`;
+        }
 
         function syncCurrencySymbol() {
             const sym = CURRENCY_SYMBOLS[obCurrency.value] || '₽';
@@ -781,15 +1116,28 @@
             // Навигация
             obBackBtn.style.display = target === 0 ? 'none' : 'block';
             obNextBtn.innerText = target === obSteps.length - 1 ? 'Построить стратегию' : 'Далее';
-            // Фокус на активном поле
+            // Высота сцены подстраивается под активный шаг (чтобы высокий шаг не накладывался на кнопки)
+            document.getElementById('obStage').style.minHeight = obSteps[target].offsetHeight + 'px';
+            // Фокус на активном поле (кроме шага мультивыбора стран)
             const field = obStepFields[target];
-            const focusEl = field ? document.getElementById(field) : obSteps[target].querySelector('select');
+            let focusEl = null;
+            if (field === 'countries') focusEl = null;
+            else if (field) focusEl = document.getElementById(field);
+            else focusEl = obSteps[target].querySelector('select');
             setTimeout(() => { if (focusEl) focusEl.focus(); }, 120);
         }
 
         function obValidateCurrent() {
             const field = obStepFields[obIndex];
             if (!field) return true; // select
+            if (field === 'countries') {
+                if (obSelectedCountries.length === 0) {
+                    const wrap = document.getElementById('obCountries');
+                    wrap.classList.remove('ob-shake'); void wrap.offsetWidth; wrap.classList.add('ob-shake');
+                    return false;
+                }
+                return true;
+            }
             const el = document.getElementById(field);
             const val = el.value.trim();
             const num = parseFloat(val);
@@ -830,7 +1178,8 @@
                 initial_capital: parseFloat(document.getElementById('obInitial').value),
                 monthly_deposit: parseFloat(document.getElementById('obMonthly').value),
                 target_income: parseFloat(document.getElementById('obTarget').value),
-                years_horizon: parseInt(document.getElementById('obHorizon').value, 10)
+                years_horizon: parseInt(document.getElementById('obHorizon').value, 10),
+                countries: obSelectedCountries.slice()
             };
             try {
                 const token = encodeURIComponent(getAccessToken());
@@ -855,8 +1204,269 @@
         // Инициализация wizard при показе экрана онбординга
         function initOnboarding() {
             obIndex = 0;
+            obSelectedCountries = [];
             syncCurrencySymbol();
+            renderCountryChips();
             obRender(0);
+        }
+
+        // ===== ДАШБОРД =====
+        const RISK_RETURNS = { conservative: 0.06, moderate: 0.10, aggressive: 0.14 };
+        const RISK_LABELS = { conservative: 'Консервативный', moderate: 'Умеренный', aggressive: 'Агрессивный' };
+        const nfmt = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function animateCount(el, target, duration) {
+            const start = performance.now();
+            function tick(now) {
+                const p = Math.min((now - start) / duration, 1);
+                el.innerText = nfmt.format(Math.round(target * easeOutCubic(p)));
+                if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // Помесячная симуляция роста капитала, возвращает капитал на конец каждого года
+        function projectSeries(initial, monthly, annualRate, years) {
+            const mr = annualRate / 12;
+            let cap = initial;
+            const series = [initial];
+            for (let y = 1; y <= years; y++) {
+                for (let m = 0; m < 12; m++) { cap = cap * (1 + mr) + monthly; }
+                series.push(cap);
+            }
+            return series;
+        }
+
+        const compactFmt = new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 });
+
+        // Построение SVG area-графика с подписями осей и анимацией отрисовки
+        function renderAreaChart(series, currencySym) {
+            const W = 680, H = 260, padL = 80, padR = 18, padT = 16, padB = 34;
+            const n = series.length;
+            const maxV = Math.max(...series) || 1;
+            const x = i => padL + (i / (n - 1)) * (W - padL - padR);
+            const y = v => padT + (1 - v / maxV) * (H - padT - padB);
+            const baseY = H - padB;
+
+            let line = '';
+            series.forEach((v, i) => { line += (i === 0 ? 'M' : 'L') + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; });
+            const area = line + `L ${x(n - 1).toFixed(1)} ${baseY} L ${x(0).toFixed(1)} ${baseY} Z`;
+            const lastX = x(n - 1).toFixed(1), lastY = y(series[n - 1]).toFixed(1);
+
+            // Горизонтальные линии сетки + подписи оси Y (0, 1/2, max)
+            let grid = '', yLabels = '';
+            [0, 0.5, 1].forEach(f => {
+                const gy = (baseY - f * (baseY - padT)).toFixed(1);
+                grid += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#f0f0f2" stroke-width="1"/>`;
+                const label = f === 0 ? '0' : compactFmt.format(maxV * f) + ' ' + (currencySym || '');
+                yLabels += `<text class="chart-axis-label" x="${padL - 10}" y="${gy}" text-anchor="end" dominant-baseline="middle">${label}</text>`;
+            });
+
+            // Подписи оси X (годы): начало, середина, конец
+            const years = n - 1;
+            let xLabels = '';
+            [0, Math.round(years / 2), years].forEach(yr => {
+                xLabels += `<text class="chart-axis-label" x="${x(yr).toFixed(1)}" y="${H - 10}" text-anchor="middle">${yr === 0 ? 'сейчас' : yr + ' г.'}</text>`;
+            });
+
+            const svg = `
+                <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#1d1d1f" stop-opacity="0.12"/>
+                            <stop offset="100%" stop-color="#1d1d1f" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    ${grid}
+                    ${yLabels}
+                    ${xLabels}
+                    <path id="chartArea" d="${area}" fill="url(#areaGrad)" opacity="0" style="transition: opacity 1s ease 0.3s;"/>
+                    <path id="chartLine" d="${line}" fill="none" stroke="#1d1d1f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle id="chartDot" cx="${lastX}" cy="${lastY}" r="4.5" fill="#24b24b" opacity="0" style="transition: opacity 0.4s ease 1.2s;"/>
+                </svg>`;
+            const wrap = document.getElementById('chartWrap');
+            wrap.innerHTML = svg;
+
+            // Анимация «прорисовки» линии
+            const path = document.getElementById('chartLine');
+            const len = path.getTotalLength();
+            path.style.strokeDasharray = len;
+            path.style.strokeDashoffset = len;
+            path.getBoundingClientRect(); // reflow
+            path.style.transition = 'stroke-dashoffset 1.3s cubic-bezier(0.16, 1, 0.3, 1)';
+            path.style.strokeDashoffset = '0';
+            requestAnimationFrame(() => {
+                document.getElementById('chartArea').style.opacity = '1';
+                document.getElementById('chartDot').style.opacity = '1';
+            });
+        }
+
+        // Палитра линий для стран
+        const PP_COLORS = ['#1d1d1f', '#ff9f0a', '#2b6fd6'];
+
+        // График реального пассивного дохода с поправкой на инфляцию (в валюте, по странам)
+        function renderPurchasingPower(countryCodes, years, targetIncome, sym) {
+            const W = 680, H = 260, padL = 80, padR = 18, padT = 16, padB = 34;
+            const x = t => padL + (t / years) * (W - padL - padR);
+            const maxV = targetIncome || 1;
+            const y = v => padT + (1 - v / maxV) * (H - padT - padB);
+            const baseY = H - padB;
+
+            // Сетка + ось Y (в валюте: 0 .. целевой доход)
+            let grid = '', yLabels = '';
+            [0, 0.5, 1].forEach(f => {
+                const gy = (baseY - f * (baseY - padT)).toFixed(1);
+                grid += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#f0f0f2" stroke-width="1"/>`;
+                const label = f === 0 ? '0' : compactFmt.format(maxV * f) + ' ' + (sym || '');
+                yLabels += `<text class="chart-axis-label" x="${padL - 10}" y="${gy}" text-anchor="end" dominant-baseline="middle">${label}</text>`;
+            });
+            let xLabels = '';
+            [0, Math.round(years / 2), years].forEach(yr => {
+                xLabels += `<text class="chart-axis-label" x="${x(yr).toFixed(1)}" y="${H - 10}" text-anchor="middle">${yr === 0 ? 'сейчас' : yr + ' г.'}</text>`;
+            });
+
+            let paths = '';
+            countryCodes.forEach((code, idx) => {
+                const c = COUNTRY_BY_CODE[code]; if (!c) return;
+                const color = PP_COLORS[idx % PP_COLORS.length];
+                let d = '';
+                for (let t = 0; t <= years; t++) {
+                    const real = targetIncome / Math.pow(1 + c.infl / 100, t);
+                    d += (t === 0 ? 'M' : 'L') + x(t).toFixed(1) + ' ' + y(real).toFixed(1) + ' ';
+                }
+                paths += `<path class="pp-line" d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+            });
+
+            document.getElementById('ppChartWrap').innerHTML = `
+                <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+                    ${grid}${yLabels}${xLabels}${paths}
+                </svg>`;
+
+            // Анимация прорисовки всех линий
+            document.querySelectorAll('#ppChartWrap .pp-line').forEach(p => {
+                const len = p.getTotalLength();
+                p.style.strokeDasharray = len;
+                p.style.strokeDashoffset = len;
+                p.getBoundingClientRect();
+                p.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1)';
+                p.style.strokeDashoffset = '0';
+            });
+
+            // Легенда: страна + инфляция + реальный доход в конце периода
+            document.getElementById('ppLegend').innerHTML = countryCodes.map((code, idx) => {
+                const c = COUNTRY_BY_CODE[code]; if (!c) return '';
+                const color = PP_COLORS[idx % PP_COLORS.length];
+                const realEnd = targetIncome / Math.pow(1 + c.infl / 100, years);
+                return `<span class="pp-legend-item"><span class="pp-legend-dot" style="background:${color}"></span>${c.flag} ${c.name} <span class="pp-legend-infl">· инфл. ${c.infl}% · через ${years} лет ≈ ${nfmt.format(Math.round(realEnd))} ${sym}</span></span>`;
+            }).join('');
+        }
+
+        async function loadDashboard() {
+            const user = localStorage.getItem('aeterna_user') || sessionStorage.getItem('aeterna_user') || 'Инвестор';
+            document.getElementById('dashAvatar').innerText = user.trim().charAt(0).toUpperCase() || 'A';
+
+            let goals;
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/goals?token=' + token);
+                if (!r.ok) return;
+                goals = await r.json();
+            } catch (e) { return; }
+
+            const sym = CURRENCY_SYMBOLS[goals.currency] || '₽';
+            ['kpiCur1','kpiCur2','kpiCur3','kpiCur4','kpiCur5'].forEach(id => { document.getElementById(id).innerText = sym; });
+
+            // Подзаголовок профиля: риск-профиль + валюта
+            const riskKey = goals.risk_profile;
+            document.getElementById('dashProfileSub').innerHTML =
+                `<span class="risk-badge risk-${riskKey}">${RISK_LABELS[riskKey] || riskKey}</span>` +
+                `<span class="dot-sep">·</span>Учёт в ${goals.currency}`;
+
+            // KPI
+            animateCount(document.getElementById('kpiInitial'), goals.initial_capital, 1100);
+            animateCount(document.getElementById('kpiMonthly'), goals.monthly_deposit, 1100);
+            animateCount(document.getElementById('kpiTarget'), goals.target_income, 1100);
+            animateCount(document.getElementById('kpiHorizon'), goals.years_horizon, 900);
+
+            // Прогноз
+            const rate = RISK_RETURNS[riskKey] || 0.08;
+            const series = projectSeries(goals.initial_capital, goals.monthly_deposit, rate, goals.years_horizon);
+            const forecastCapital = series[series.length - 1];
+            const targetCapital = goals.target_income * 12 / 0.04; // правило 4%
+            const achievement = Math.max(0, Math.min(forecastCapital / targetCapital * 100, 100));
+
+            document.getElementById('fcYears').innerText = goals.years_horizon;
+            animateCount(document.getElementById('fcCapital'), forecastCapital, 1400);
+            animateCount(document.getElementById('fcTarget'), targetCapital, 1400);
+            document.getElementById('chartHint').innerText =
+                `Доходность ${(rate * 100).toFixed(0)}% годовых · горизонт ${goals.years_horizon} лет`;
+
+            renderAreaChart(series, sym);
+
+            // Кольцо достижения
+            const C = 2 * Math.PI * 80;
+            const ring = document.getElementById('donutRing');
+            ring.style.strokeDashoffset = C; // сброс
+            ring.getBoundingClientRect();
+            ring.style.stroke = achievement >= 100 ? '#24b24b' : (achievement >= 50 ? '#1d1d1f' : '#ff9f0a');
+            requestAnimationFrame(() => { ring.style.strokeDashoffset = C * (1 - achievement / 100); });
+            animateCount(document.getElementById('donutPct'), Math.round(achievement), 1400);
+
+            // Реальный пассивный доход с поправкой на инфляцию по странам
+            const countries = (goals.countries && goals.countries.length) ? goals.countries : ['RU'];
+            renderPurchasingPower(countries, goals.years_horizon, goals.target_income, sym);
+
+            // Режим отображения: предпросмотр (с баннером) или вкладки (после утверждения)
+            applyApprovalMode(goals.goal_approved);
+        }
+
+        // Переключение вкладок профиля
+        function switchTab(name) {
+            document.querySelectorAll('#dashTabs .dash-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === name);
+            });
+            document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
+            document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
+        }
+
+        // Применяет режим: до утверждения — предпросмотр цели с баннером; после — вкладки
+        function applyApprovalMode(approved) {
+            const banner = document.getElementById('approveBanner');
+            const tabs = document.getElementById('dashTabs');
+            const goalActions = document.getElementById('tabGoalActions');
+            if (approved) {
+                banner.style.display = 'none';
+                tabs.style.display = 'flex';
+                goalActions.style.display = 'block';
+                switchTab('general'); // по умолчанию открываем «Общее»
+            } else {
+                banner.style.display = 'flex';
+                banner.classList.remove('approved');
+                tabs.style.display = 'none';
+                goalActions.style.display = 'none';
+                // Показываем только цель как предпросмотр
+                document.getElementById('tabGeneral').classList.remove('active');
+                document.getElementById('tabGoal').classList.add('active');
+            }
+        }
+
+        async function approveGoal() {
+            const btn = document.getElementById('approveBtn');
+            if (btn) { btn.disabled = true; btn.innerText = 'Сохранение...'; }
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/goals/approve?token=' + token, { method: 'POST' });
+                if (r.ok) {
+                    applyApprovalMode(true);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (btn) {
+                    btn.disabled = false; btn.innerText = 'Утвердить цель';
+                }
+            } catch (e) {
+                if (btn) { btn.disabled = false; btn.innerText = 'Утвердить цель'; }
+            }
         }
     </script>
 </body>
