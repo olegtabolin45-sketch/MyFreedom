@@ -15,6 +15,25 @@ MAX_PASSWORD_BYTES = 72
 # Допустимые значения онбординга
 ALLOWED_CURRENCIES = ("RUB", "USD", "EUR", "GBP", "CNY", "JPY", "CHF")
 ALLOWED_RISK_PROFILES = ("conservative", "moderate", "aggressive")
+# Страны проживания (для поправки на инфляцию). Должны совпадать с фронтендом.
+ALLOWED_COUNTRIES = (
+    "RU",
+    "US",
+    "DE",
+    "GB",
+    "CH",
+    "AE",
+    "TR",
+    "KZ",
+    "GE",
+    "TH",
+    "ES",
+    "CY",
+    "RS",
+    "ME",
+    "PT",
+)
+MAX_COUNTRIES = 3
 
 
 class _StrictModel(BaseModel):
@@ -87,6 +106,22 @@ class OnboardingRequest(_StrictModel):
     target_income: float = Field(..., gt=0, le=1e15)
     years_horizon: int = Field(..., gt=0, le=120)
     risk_profile: str
+    # Страны, где пользователь планирует жить (для поправки на инфляцию)
+    countries: list[str] = Field(..., min_length=1, max_length=MAX_COUNTRIES)
+
+    @field_validator("countries")
+    @classmethod
+    def validate_countries(cls, v: list[str]) -> list[str]:
+        result = []
+        for item in v:
+            code = item.strip().upper()
+            if code not in ALLOWED_COUNTRIES:
+                raise ValueError(f"Неизвестный код страны: {item}.")
+            if code not in result:
+                result.append(code)
+        if not result:
+            raise ValueError("Выберите хотя бы одну страну.")
+        return result
 
     @field_validator("currency")
     @classmethod

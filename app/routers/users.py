@@ -52,7 +52,8 @@ async def get_goals(token: str):
         cursor.execute(
             """
             SELECT currency, initial_capital, monthly_deposit,
-                   target_income, years_horizon, risk_profile
+                   target_income, years_horizon, risk_profile,
+                   countries, goal_approved
             FROM user_goals WHERE email = %s
             """,
             (email,),
@@ -61,6 +62,7 @@ async def get_goals(token: str):
         if not row:
             raise HTTPException(status_code=404, detail="Цели ещё не заданы.")
 
+        countries = [c for c in (row[6] or "").split(",") if c]
         return {
             "currency": row[0],
             "initial_capital": row[1],
@@ -68,6 +70,8 @@ async def get_goals(token: str):
             "target_income": row[3],
             "years_horizon": row[4],
             "risk_profile": row[5],
+            "countries": countries,
+            "goal_approved": bool(row[7]),
         }
     except HTTPException as he:
         raise he
@@ -90,12 +94,13 @@ async def save_onboarding(data: OnboardingRequest, token: str, request: Request)
 
         cursor.execute("DELETE FROM user_goals WHERE email = %s", (email,))
 
+        # Переонбординг сбрасывает статус утверждения цели (goal_approved=false по умолчанию)
         cursor.execute(
             """
             INSERT INTO user_goals
             (email, currency, initial_capital, monthly_deposit,
-             target_income, years_horizon, risk_profile)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+             target_income, years_horizon, risk_profile, countries)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 email,
@@ -105,6 +110,7 @@ async def save_onboarding(data: OnboardingRequest, token: str, request: Request)
                 data.target_income,
                 data.years_horizon,
                 data.risk_profile,
+                ",".join(data.countries),
             ),
         )
 
@@ -122,6 +128,35 @@ async def save_onboarding(data: OnboardingRequest, token: str, request: Request)
             status_code=500,
             detail="Ошибка записи данных конфигурации целей.",
         ) from e
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@router.post("/goals/approve")
+async def approve_goal(token: str, request: Request):
+    """Фиксирует, что пользователь утвердил цель после просмотра прогноза."""
+    email = decode_access_token(token)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE user_goals SET goal_approved = true WHERE email = %s",
+            (email,),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Цели ещё не заданы.")
+        conn.commit()
+        audit.record_event(request, audit.GOAL_APPROVED, email=email)
+        return {"status": "success", "message": "Цель утверждена."}
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error("Ошибка утверждения цели: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка утверждения цели.") from e
     finally:
         if conn is not None:
             conn.close()
