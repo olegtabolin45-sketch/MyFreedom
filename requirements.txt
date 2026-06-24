@@ -11,3 +11,5 @@ sqlalchemy
 redis
 pyotp
 qrcode[pil]
+openpyxl
+python-multipart
