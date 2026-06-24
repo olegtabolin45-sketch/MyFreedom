@@ -607,7 +607,7 @@
                 <div class="pf-section-title">Активы в портфеле</div>
                 <div class="pf-table-wrap">
                     <table class="pf-table">
-                        <thead><tr><th>Актив</th><th>Тикер</th><th>ISIN</th><th class="num">Количество</th></tr></thead>
+                        <thead><tr><th>Актив</th><th>Тикер</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Стоимость</th><th class="num">Доля</th></tr></thead>
                         <tbody id="pfPositionsBody"></tbody>
                     </table>
                 </div>
@@ -1521,10 +1521,28 @@
             document.getElementById('pfData').style.display = hasData ? 'block' : 'none';
             if (!hasData) return;
 
-            document.getElementById('pfPositionsBody').innerHTML = (data.positions || []).map(p =>
-                `<tr><td>${p.name || '—'}</td><td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
-                `<td>${p.isin || '—'}</td><td class="num">${nfmt.format(p.quantity || 0)}</td></tr>`
-            ).join('') || '<tr><td colspan="4">Нет открытых позиций</td></tr>';
+            const total = data.total_value || 0;
+            const cur = data.value_currency || '₽';
+            const curSym = CURRENCY_SYMBOLS[cur] || cur;
+
+            // Метрика «Текущая стоимость портфеля»
+            const pfVal = document.getElementById('pfValue');
+            if (data.total_value != null) {
+                pfVal.classList.remove('muted');
+                pfVal.innerText = `${nfmt.format(Math.round(total))} ${curSym}`;
+            } else {
+                pfVal.classList.add('muted');
+                pfVal.innerText = `— ${curSym}`;
+            }
+
+            document.getElementById('pfPositionsBody').innerHTML = (data.positions || []).map(p => {
+                const price = p.price != null ? num2.format(p.price) + ' ' + curSym : '—';
+                const value = p.value != null ? nfmt.format(Math.round(p.value)) + ' ' + curSym : '—';
+                const share = (p.value != null && total > 0) ? (p.value / total * 100).toFixed(1) + '%' : '—';
+                return `<tr><td>${p.name || '—'}</td><td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
+                    `<td class="num">${nfmt.format(p.quantity || 0)}</td>` +
+                    `<td class="num">${price}</td><td class="num">${value}</td><td class="num">${share}</td></tr>`;
+            }).join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
 
             document.getElementById('pfTradesBody').innerHTML = (data.trades || []).map(t => {
                 const buy = (t.side || '').toLowerCase().includes('покуп');
@@ -1550,8 +1568,8 @@
                 const result = await r.json();
                 if (r.ok) {
                     status.className = 'upload-status ok';
-                    status.innerText = `Готово: позиций ${result.positions_count}, сделок ${result.trades_count}.`;
-                    renderPortfolio({ has_data: true, positions: result.positions, trades: result.trades });
+                    status.innerText = `Готово: позиций ${result.positions_count}, сделок ${result.trades_count}. Загружаем котировки…`;
+                    await loadPortfolio(); // перезагрузка с живыми ценами MOEX
                 } else {
                     status.className = 'upload-status err';
                     status.innerText = result.detail || 'Не удалось обработать отчёт.';

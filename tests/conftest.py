@@ -14,6 +14,8 @@ import pytest
 os.environ.setdefault("JWT_SECRET", "test-secret-for-pytest")
 # В тестах rate limiting мешает (все запросы с одного IP) — отключаем.
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Не ходим в сеть за котировками MOEX во время тестов.
+os.environ["QUOTES_ENABLED"] = "false"
 
 from fastapi.testclient import TestClient  # noqa: E402
 

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit
+from app import audit, quotes
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -33,6 +33,23 @@ async def get_portfolio(token: str):
             for r in cursor.fetchall()
         ]
 
+        # Подмешиваем живые котировки MOEX и считаем рыночную стоимость
+        quote_map = quotes.get_quotes([p["ticker"] for p in positions])
+        total_value = 0.0
+        has_quotes = False
+        for p in positions:
+            q = quote_map.get(p["ticker"])
+            if q:
+                has_quotes = True
+                p["price"] = q["price"]
+                p["currency"] = q["currency"]
+                p["value"] = round(q["price"] * p["quantity"], 2)
+                total_value += p["value"]
+            else:
+                p["price"] = None
+                p["currency"] = None
+                p["value"] = None
+
         cursor.execute(
             "SELECT trade_date, trade_time, side, name, ticker, price, currency, "
             "quantity, amount, commission FROM portfolio_trades "
@@ -54,7 +71,13 @@ async def get_portfolio(token: str):
             }
             for r in cursor.fetchall()
         ]
-        return {"has_data": bool(positions or trades), "positions": positions, "trades": trades}
+        return {
+            "has_data": bool(positions or trades),
+            "positions": positions,
+            "trades": trades,
+            "total_value": round(total_value, 2) if has_quotes else None,
+            "value_currency": "RUB",
+        }
     except HTTPException:
         raise
     except Exception as e:

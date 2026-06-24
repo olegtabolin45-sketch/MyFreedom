@@ -24,6 +24,8 @@ if not JWT_SECRET:
 JWT_ALGORITHM = "HS256"
 # Можно отключить rate limiting (например, в тестах): RATE_LIMIT_ENABLED=false
 RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false"
+# Котировки MOEX (отключаемо в тестах, чтобы не ходить в сеть): QUOTES_ENABLED=false
+QUOTES_ENABLED = os.environ.get("QUOTES_ENABLED", "true").lower() != "false"
 # Короткоживущий access-токен + долгий refresh-токен (хранится в Redis)
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
