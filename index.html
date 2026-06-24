@@ -202,26 +202,61 @@
         .landing-mode { display: flex; }
         .authorized-mode { display: none; }
 
-        /* Онбординг — настройка финансовых целей */
-        .onboarding-container { max-width: 560px; margin: 48px auto; }
-        .onboarding-container h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; text-align: center; color: #1d1d1f; }
-        .onboarding-container .subtitle { font-size: 14px; color: #86868b; margin-bottom: 28px; text-align: center; }
-        .field-label { display: block; text-align: left; font-size: 13px; font-weight: 500; color: #515154; margin-bottom: 6px; }
-        .field-hint { font-size: 12px; color: #86868b; font-weight: 400; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .auth-form select {
-            width: 100%; height: 48px; padding: 0 14px;
-            background-color: #ffffff; border: 1px solid #d2d2d7; border-radius: 8px;
-            font-size: 15px; color: #1d1d1f; cursor: pointer;
-            transition: all 0.15s ease;
-            appearance: none; -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: right 14px center;
+        /* Онбординг — пошаговый wizard в стиле Apple */
+        .onboarding-container { max-width: 520px; margin: 56px auto; }
+
+        /* Прогресс */
+        .ob-progress-wrap { margin-bottom: 40px; }
+        .ob-progress-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+        .ob-progress-step { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #86868b; }
+        .ob-progress-pct { font-size: 12px; font-weight: 500; color: #1d1d1f; }
+        .ob-progress-track { height: 4px; width: 100%; background: #e5e5ea; border-radius: 2px; overflow: hidden; }
+        .ob-progress-fill { height: 100%; width: 0%; background: #1d1d1f; border-radius: 2px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Сцена с вопросами */
+        .ob-stage { position: relative; min-height: 184px; }
+        .ob-step {
+            position: absolute; inset: 0;
+            opacity: 0; transform: translateX(40px); pointer-events: none;
+            transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1), transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .auth-form select:focus { outline: none; border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); }
+        .ob-question { font-size: 27px; font-weight: 700; line-height: 1.2; color: #1d1d1f; margin-bottom: 8px; }
+        .ob-help { font-size: 14px; color: #86868b; line-height: 1.5; margin-bottom: 22px; }
+
+        .ob-step select, .ob-step input {
+            width: 100%; height: 54px; padding: 0 16px;
+            background-color: #ffffff; border: 1px solid #d2d2d7; border-radius: 10px;
+            font-size: 17px; color: #1d1d1f; transition: all 0.15s ease;
+        }
+        .ob-step select {
+            cursor: pointer; appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 16px center;
+        }
+        .ob-step select:focus, .ob-step input:focus { outline: none; border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06); }
         .input-prefix { position: relative; }
-        .input-prefix > span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #86868b; font-size: 15px; pointer-events: none; }
-        .input-prefix input { padding-left: 30px !important; }
+        .input-prefix > span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #86868b; font-size: 17px; pointer-events: none; }
+        .input-prefix input { padding-left: 34px !important; }
+        .field-hint { font-size: 13px; color: #86868b; font-weight: 400; }
+
+        @keyframes obShake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-7px)} 40%,80%{transform:translateX(7px)} }
+        .ob-shake { animation: obShake 0.4s ease; }
+
+        /* Навигация */
+        .ob-nav { display: flex; align-items: center; gap: 12px; margin-top: 32px; }
+        .ob-back {
+            height: 50px; padding: 0 20px; background: #ffffff; color: #1d1d1f;
+            border: 1px solid #d2d2d7; border-radius: 10px; font-size: 15px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .ob-back:hover { background: #f5f5f7; border-color: #86868b; }
+        .ob-next {
+            flex: 1; height: 50px; background: #1d1d1f; color: #ffffff; border: none;
+            border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+        }
+        .ob-next:hover { background: #000000; }
+        .ob-next:active, .ob-back:active { transform: scale(0.99); }
+        .ob-next:disabled { background: #f5f5f7; color: #d2d2d7; cursor: not-allowed; transform: none; }
     </style>
 </head>
 <body>
@@ -343,64 +378,82 @@
         <button class="btn-submit btn-logout" onclick="logout()">Завершить сессию</button>
     </div>
 
-    <!-- ОНБОРДИНГ: настройка финансовых целей -->
+    <!-- ОНБОРДИНГ: пошаговый wizard -->
     <div class="card-container onboarding-container authorized-mode" id="onboardingScreen">
-        <h2>Настройка стратегии</h2>
-        <div class="subtitle">Зададим параметры, чтобы построить ваш трек к финансовой независимости.</div>
-        <form class="auth-form" id="onboardingForm">
-            <div class="form-row">
-                <div>
-                    <label class="field-label" for="obCurrency">Базовая валюта</label>
-                    <select id="obCurrency" required>
-                        <option value="RUB">₽ Рубль (RUB)</option>
-                        <option value="USD">$ Доллар (USD)</option>
+        <div class="ob-progress-wrap">
+            <div class="ob-progress-meta">
+                <span class="ob-progress-step" id="obStepLabel">Шаг 1 из 6</span>
+                <span class="ob-progress-pct" id="obStepTitle">Валюта учёта</span>
+            </div>
+            <div class="ob-progress-track"><div class="ob-progress-fill" id="obProgressFill"></div></div>
+        </div>
+
+        <form id="onboardingForm" autocomplete="off">
+            <div class="ob-stage" id="obStage">
+
+                <div class="ob-step" data-title="Валюта учёта">
+                    <div class="ob-question">В какой валюте вести учёт?</div>
+                    <div class="ob-help">Все расчёты и прогнозы будут в этой валюте. Можно изменить позже.</div>
+                    <select id="obCurrency">
+                        <option value="RUB">₽ Российский рубль (RUB)</option>
+                        <option value="USD">$ Доллар США (USD)</option>
                         <option value="EUR">€ Евро (EUR)</option>
-                        <option value="GBP">£ Фунт (GBP)</option>
-                        <option value="CNY">¥ Юань (CNY)</option>
-                        <option value="JPY">¥ Иена (JPY)</option>
-                        <option value="CHF">₣ Франк (CHF)</option>
+                        <option value="GBP">£ Фунт стерлингов (GBP)</option>
+                        <option value="CNY">¥ Китайский юань (CNY)</option>
+                        <option value="JPY">¥ Японская иена (JPY)</option>
+                        <option value="CHF">₣ Швейцарский франк (CHF)</option>
                     </select>
                 </div>
-                <div>
-                    <label class="field-label" for="obRisk">Риск-профиль</label>
-                    <select id="obRisk" required>
-                        <option value="conservative">Консервативный</option>
-                        <option value="moderate" selected>Умеренный</option>
-                        <option value="aggressive">Агрессивный</option>
+
+                <div class="ob-step" data-title="Риск-профиль">
+                    <div class="ob-question">Какой у вас риск-профиль?</div>
+                    <div class="ob-help">Определяет ожидаемую доходность и волатильность в прогнозе трека.</div>
+                    <select id="obRisk">
+                        <option value="conservative">Консервативный — стабильность важнее</option>
+                        <option value="moderate" selected>Умеренный — баланс риска и роста</option>
+                        <option value="aggressive">Агрессивный — максимальный рост</option>
                     </select>
                 </div>
-            </div>
 
-            <div>
-                <label class="field-label" for="obInitial">Стартовый капитал</label>
-                <div class="input-wrapper input-prefix">
-                    <span id="obCurSym1">₽</span>
-                    <input type="number" id="obInitial" placeholder="0" min="0" step="any" required>
+                <div class="ob-step" data-title="Стартовый капитал">
+                    <div class="ob-question">С какого капитала начинаете?</div>
+                    <div class="ob-help">Сумма, которая уже есть для инвестирования сегодня.</div>
+                    <div class="input-wrapper input-prefix">
+                        <span class="ob-cur-sym">₽</span>
+                        <input type="number" id="obInitial" placeholder="0" min="0" step="any" inputmode="decimal">
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <label class="field-label" for="obMonthly">Ежемесячное пополнение</label>
-                <div class="input-wrapper input-prefix">
-                    <span id="obCurSym2">₽</span>
-                    <input type="number" id="obMonthly" placeholder="0" min="0" step="any" required>
+                <div class="ob-step" data-title="Пополнение">
+                    <div class="ob-question">Сколько готовы откладывать в месяц?</div>
+                    <div class="ob-help">Регулярные пополнения — главный двигатель сложного процента.</div>
+                    <div class="input-wrapper input-prefix">
+                        <span class="ob-cur-sym">₽</span>
+                        <input type="number" id="obMonthly" placeholder="0" min="0" step="any" inputmode="decimal">
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <label class="field-label" for="obTarget">Целевой пассивный доход <span class="field-hint">(в месяц)</span></label>
-                <div class="input-wrapper input-prefix">
-                    <span id="obCurSym3">₽</span>
-                    <input type="number" id="obTarget" placeholder="0" min="1" step="any" required>
+                <div class="ob-step" data-title="Целевой доход">
+                    <div class="ob-question">Какой пассивный доход — ваша цель?</div>
+                    <div class="ob-help">Сумма в месяц, которую капитал должен приносить вам.</div>
+                    <div class="input-wrapper input-prefix">
+                        <span class="ob-cur-sym">₽</span>
+                        <input type="number" id="obTarget" placeholder="0" min="1" step="any" inputmode="decimal">
+                    </div>
                 </div>
+
+                <div class="ob-step" data-title="Горизонт">
+                    <div class="ob-question">За сколько лет хотите прийти к цели?</div>
+                    <div class="ob-help">Горизонт планирования в годах — от 1 до 120.</div>
+                    <input type="number" id="obHorizon" placeholder="например, 15" min="1" max="120" inputmode="numeric">
+                </div>
+
             </div>
 
-            <div>
-                <label class="field-label" for="obHorizon">Горизонт планирования <span class="field-hint">(лет)</span></label>
-                <input type="number" id="obHorizon" placeholder="например, 15" min="1" max="120" required>
+            <div class="ob-nav">
+                <button type="button" class="ob-back" id="obBackBtn" style="display: none;">Назад</button>
+                <button type="submit" class="ob-next" id="obNextBtn">Далее</button>
             </div>
-
-            <button type="submit" id="obSubmitBtn" class="btn-submit">Построить стратегию</button>
         </form>
         <div id="obError" class="message"></div>
     </div>
@@ -576,6 +629,7 @@
         function showOnboarding() {
             document.getElementById('profileScreen').style.display = 'none';
             document.getElementById('onboardingScreen').style.display = 'block';
+            initOnboarding();
         }
 
         function clearTokens() {
@@ -685,25 +739,91 @@
             }
         });
 
-        // ОНБОРДИНГ: символ валюты у денежных полей
+        // ===== ОНБОРДИНГ: пошаговый wizard =====
         const CURRENCY_SYMBOLS = { RUB: '₽', USD: '$', EUR: '€', GBP: '£', CNY: '¥', JPY: '¥', CHF: '₣' };
         const obCurrency = document.getElementById('obCurrency');
+        const obSteps = Array.from(document.querySelectorAll('#obStage .ob-step'));
+        const obStepLabel = document.getElementById('obStepLabel');
+        const obStepTitle = document.getElementById('obStepTitle');
+        const obProgressFill = document.getElementById('obProgressFill');
+        const obBackBtn = document.getElementById('obBackBtn');
+        const obNextBtn = document.getElementById('obNextBtn');
+        const obErr = document.getElementById('obError');
+        let obIndex = 0;
+
+        // Поле, требующее ввода на каждом шаге (null — select, всегда валиден)
+        const obStepFields = [null, null, 'obInitial', 'obMonthly', 'obTarget', 'obHorizon'];
+
         function syncCurrencySymbol() {
             const sym = CURRENCY_SYMBOLS[obCurrency.value] || '₽';
-            ['obCurSym1', 'obCurSym2', 'obCurSym3'].forEach(id => { document.getElementById(id).innerText = sym; });
+            document.querySelectorAll('.ob-cur-sym').forEach(el => { el.innerText = sym; });
         }
         obCurrency.addEventListener('change', syncCurrencySymbol);
-        syncCurrencySymbol();
 
-        // ОНБОРДИНГ: сохранение целей
-        document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('obSubmitBtn');
-            const originalText = btn.innerText;
-            btn.disabled = true; btn.innerText = "Сохранение...";
-            const errDiv = document.getElementById('obError');
-            errDiv.style.display = 'none';
+        function obRender(target) {
+            obSteps.forEach((step, i) => {
+                if (i === target) {
+                    step.style.opacity = '1';
+                    step.style.transform = 'translateX(0)';
+                    step.style.pointerEvents = 'auto';
+                } else {
+                    // Прошедшие уезжают влево, будущие ждут справа
+                    step.style.opacity = '0';
+                    step.style.transform = `translateX(${i < target ? -40 : 40}px)`;
+                    step.style.pointerEvents = 'none';
+                }
+            });
+            // Прогресс и подписи
+            const human = target + 1;
+            obStepLabel.innerText = `Шаг ${human} из ${obSteps.length}`;
+            obStepTitle.innerText = obSteps[target].dataset.title;
+            obProgressFill.style.width = `${(human / obSteps.length) * 100}%`;
+            // Навигация
+            obBackBtn.style.display = target === 0 ? 'none' : 'block';
+            obNextBtn.innerText = target === obSteps.length - 1 ? 'Построить стратегию' : 'Далее';
+            // Фокус на активном поле
+            const field = obStepFields[target];
+            const focusEl = field ? document.getElementById(field) : obSteps[target].querySelector('select');
+            setTimeout(() => { if (focusEl) focusEl.focus(); }, 120);
+        }
 
+        function obValidateCurrent() {
+            const field = obStepFields[obIndex];
+            if (!field) return true; // select
+            const el = document.getElementById(field);
+            const val = el.value.trim();
+            const num = parseFloat(val);
+            let ok = val !== '' && !isNaN(num);
+            // целевой доход и горизонт должны быть > 0
+            if (ok && (field === 'obTarget' || field === 'obHorizon') && num <= 0) ok = false;
+            if (ok && num < 0) ok = false;
+            if (!ok) {
+                el.classList.remove('ob-shake'); void el.offsetWidth; el.classList.add('ob-shake');
+                el.focus();
+            }
+            return ok;
+        }
+
+        function obGoNext() {
+            if (!obValidateCurrent()) return;
+            if (obIndex < obSteps.length - 1) {
+                obIndex++; obRender(obIndex);
+            } else {
+                obSubmit();
+            }
+        }
+        function obGoBack() {
+            if (obIndex > 0) { obIndex--; obRender(obIndex); }
+        }
+
+        obNextBtn && document.getElementById('onboardingForm').addEventListener('submit', (e) => {
+            e.preventDefault(); obGoNext();
+        });
+        obBackBtn.addEventListener('click', obGoBack);
+
+        async function obSubmit() {
+            obNextBtn.disabled = true; const original = obNextBtn.innerText; obNextBtn.innerText = 'Сохранение...';
+            obErr.style.display = 'none';
             const payload = {
                 currency: obCurrency.value,
                 risk_profile: document.getElementById('obRisk').value,
@@ -712,7 +832,6 @@
                 target_income: parseFloat(document.getElementById('obTarget').value),
                 years_horizon: parseInt(document.getElementById('obHorizon').value, 10)
             };
-
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const response = await fetch(API_BASE + '/api/onboarding?token=' + token, {
@@ -724,14 +843,21 @@
                 if (response.ok) {
                     showProfile();
                 } else {
-                    errDiv.innerText = formatPydanticError(result.detail) || "Не удалось сохранить стратегию."; errDiv.style.display = 'block';
+                    obErr.innerText = formatPydanticError(result.detail) || "Не удалось сохранить стратегию."; obErr.style.display = 'block';
                 }
             } catch (k) {
-                errDiv.innerText = "Не удалось связаться с сервером Aeterna."; errDiv.style.display = 'block';
+                obErr.innerText = "Не удалось связаться с сервером Aeterna."; obErr.style.display = 'block';
             } finally {
-                btn.disabled = false; btn.innerText = originalText;
+                obNextBtn.disabled = false; obNextBtn.innerText = original;
             }
-        });
+        }
+
+        // Инициализация wizard при показе экрана онбординга
+        function initOnboarding() {
+            obIndex = 0;
+            syncCurrencySymbol();
+            obRender(0);
+        }
     </script>
 </body>
 </html>
