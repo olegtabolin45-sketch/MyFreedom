@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from fastapi import HTTPException, Request, status
 
+from app import config
 from app.logging_config import logger
 
 _rate_buckets = defaultdict(list)
@@ -17,6 +18,8 @@ _rate_lock = threading.Lock()
 
 def check_rate_limit(request: Request, scope: str, max_requests: int, window_seconds: int):
     """Ограничивает число запросов с одного IP. Бросает 429 при превышении."""
+    if not config.RATE_LIMIT_ENABLED:
+        return
     client_ip = request.client.host if request.client else "unknown"
     key = f"{scope}:{client_ip}"
     now = time.time()

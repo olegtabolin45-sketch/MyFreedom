@@ -20,6 +20,8 @@ if not JWT_SECRET:
         "Создайте файл .env (см. .env.example) с надёжным секретным ключом."
     )
 JWT_ALGORITHM = "HS256"
+# Можно отключить rate limiting (например, в тестах): RATE_LIMIT_ENABLED=false
+RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false"
 # Короткоживущий access-токен + долгий refresh-токен (хранится в Redis)
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
