@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aeterna
+          POSTGRES_PASSWORD: aeterna_ci_pwd
+          POSTGRES_DB: aeterna
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aeterna -d aeterna"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      JWT_SECRET: ci-test-secret
+      RATE_LIMIT_ENABLED: "false"
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: aeterna
+      DB_USER: aeterna
+      DB_PASSWORD: aeterna_ci_pwd
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Apply database migrations
+        run: alembic upgrade head
+
+      - name: Run tests
+        run: python -m pytest
