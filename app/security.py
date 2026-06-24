@@ -79,7 +79,7 @@ def decode_access_token(token: str) -> str:
 def generate_refresh_token(email: str) -> str:
     token = secrets.token_urlsafe(48)
     ttl = config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
-    get_redis().setex(_REFRESH_PREFIX + token, ttl, email)
+    get_redis().set(_REFRESH_PREFIX + token, email, ex=ttl)
     return token
 
 
@@ -126,7 +126,7 @@ def blacklist_access_token(token: str) -> None:
     ttl = int(exp) - int(time.time())
     if ttl > 0:
         try:
-            get_redis().setex(_BLACKLIST_PREFIX + jti, ttl, "1")
+            get_redis().set(_BLACKLIST_PREFIX + jti, "1", ex=ttl)
         except Exception as e:
             logger.warning("Не удалось добавить токен в blacklist: %s", e)
 

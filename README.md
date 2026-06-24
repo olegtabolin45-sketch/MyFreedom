@@ -10,8 +10,23 @@
 
 ## Запуск
 
+Весь стек (приложение + PostgreSQL + Redis) поднимается через Docker Compose:
+
 ```bash
-python server.py
+cp .env.example .env   # заполните JWT_SECRET
+docker compose up -d --build
 ```
 
-Открой `index.html` в браузере. Сервер по умолчанию запускается на `http://127.0.0.1:8000`.
+Приложение будет доступно на `http://127.0.0.1:8000` (фронтенд отдаётся тем же сервером).
+Миграции Alembic применяются автоматически при старте контейнера.
+
+## Тесты
+
+Тесты прогоняются внутри контейнера приложения (есть доступ к PostgreSQL и Redis):
+
+```bash
+docker compose exec app sh -c "pip install -r requirements-dev.txt && python -m pytest"
+```
+
+Покрыты: заголовки безопасности, валидация входных данных, полный цикл
+аутентификации (регистрация/вход/refresh с ротацией/logout с blacklist) и 2FA (TOTP).
