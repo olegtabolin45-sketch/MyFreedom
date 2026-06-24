@@ -4,6 +4,7 @@
 неожиданных полей), обрезаем пробелы по краям, ограничиваем длины и диапазоны,
 для перечислимых значений используем whitelist (Literal).
 """
+
 import re
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -92,9 +93,7 @@ class OnboardingRequest(_StrictModel):
     def validate_currency(cls, v: str) -> str:
         code = v.upper()
         if code not in ALLOWED_CURRENCIES:
-            raise ValueError(
-                f"Валюта должна быть одной из: {', '.join(ALLOWED_CURRENCIES)}."
-            )
+            raise ValueError(f"Валюта должна быть одной из: {', '.join(ALLOWED_CURRENCIES)}.")
         return code
 
     @field_validator("risk_profile")

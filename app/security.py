@@ -6,6 +6,7 @@
 - refresh-токен — непредсказуемая случайная строка (opaque), хранится в Redis
   (`refresh:<token>` → email) с TTL в днях; отзывается простым удалением ключа.
 """
+
 import secrets
 import time
 import uuid
@@ -25,6 +26,7 @@ _BLACKLIST_PREFIX = "bl:"
 
 # --- Пароли ---
 
+
 def hash_password(password: str) -> str:
     password_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt(rounds=12)
@@ -33,14 +35,13 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
-        )
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception:
         return False
 
 
 # --- Access-токены (JWT) ---
+
 
 def generate_access_token(username: str, email: str) -> str:
     now = int(time.time())
@@ -60,9 +61,9 @@ def decode_access_token(token: str) -> str:
     try:
         payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Срок действия токена истек.")
+        raise HTTPException(status_code=401, detail="Срок действия токена истек.") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Невалидный токен сессии.")
+        raise HTTPException(status_code=401, detail="Невалидный токен сессии.") from None
 
     if payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Невалидный тип токена.")
@@ -75,6 +76,7 @@ def decode_access_token(token: str) -> str:
 
 
 # --- Refresh-токены (opaque, в Redis) ---
+
 
 def generate_refresh_token(email: str) -> str:
     token = secrets.token_urlsafe(48)
@@ -107,6 +109,7 @@ def revoke_refresh_token(token: str) -> None:
 
 
 # --- Blacklist access-токенов ---
+
 
 def blacklist_access_token(token: str) -> None:
     """Заносит jti access-токена в blacklist до момента его естественного истечения."""

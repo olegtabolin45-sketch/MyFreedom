@@ -1,4 +1,5 @@
 """Эндпоинты регистрации и входа."""
+
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request, status
 
@@ -79,7 +80,7 @@ async def register_user(data: RegisterRequest, request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Внутренняя ошибка сервера при регистрации.",
-        )
+        ) from e
     finally:
         if conn is not None:
             conn.close()
@@ -143,7 +144,7 @@ async def login_user(data: LoginRequest, request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка авторизации.",
-        )
+        ) from e
     finally:
         if conn is not None:
             conn.close()
@@ -178,7 +179,7 @@ async def refresh_tokens(data: RefreshRequest, request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка обновления токена.",
-        )
+        ) from e
     finally:
         if conn is not None:
             conn.close()

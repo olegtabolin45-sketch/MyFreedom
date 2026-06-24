@@ -1,4 +1,5 @@
 """Сборка FastAPI-приложения: middleware и подключение роутеров."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

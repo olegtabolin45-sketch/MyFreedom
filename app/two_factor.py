@@ -2,6 +2,7 @@
 
 Совместимо с Google Authenticator, Authy, 1Password и т.п.
 """
+
 import base64
 import io
 

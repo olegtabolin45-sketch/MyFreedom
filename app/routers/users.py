@@ -1,4 +1,5 @@
 """Эндпоинты статуса пользователя и онбординга."""
+
 from fastapi import APIRouter, HTTPException, Request
 
 from app import audit
@@ -33,7 +34,7 @@ async def get_user_status(token: str):
         raise he
     except Exception as e:
         logger.error("Ошибка проверки статуса: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Ошибка проверки статуса.")
+        raise HTTPException(status_code=500, detail="Ошибка проверки статуса.") from e
     finally:
         if conn is not None:
             conn.close()
@@ -53,7 +54,8 @@ async def save_onboarding(data: OnboardingRequest, token: str, request: Request)
         cursor.execute(
             """
             INSERT INTO user_goals
-            (email, currency, initial_capital, monthly_deposit, target_income, years_horizon, risk_profile)
+            (email, currency, initial_capital, monthly_deposit,
+             target_income, years_horizon, risk_profile)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
@@ -80,7 +82,7 @@ async def save_onboarding(data: OnboardingRequest, token: str, request: Request)
         raise HTTPException(
             status_code=500,
             detail="Ошибка записи данных конфигурации целей.",
-        )
+        ) from e
     finally:
         if conn is not None:
             conn.close()
