@@ -368,6 +368,38 @@
         .pf-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 16px; }
         .tab-goal-actions { margin-top: 8px; }
 
+        /* Загрузка отчёта */
+        .upload-zone {
+            border: 2px dashed #d2d2d7; border-radius: 16px; padding: 36px 24px; text-align: center;
+            background: #fafafa; transition: all 0.2s ease; cursor: pointer;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #1d1d1f; background: #f5f5f7; }
+        .upload-icon { font-size: 30px; margin-bottom: 10px; }
+        .upload-zone h3 { font-size: 17px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; }
+        .upload-zone p { font-size: 13px; color: #86868b; line-height: 1.5; max-width: 440px; margin: 0 auto; }
+        .upload-status { margin-top: 14px; font-size: 14px; }
+        .upload-status.err { color: #ff3b30; }
+        .upload-status.ok { color: #24b24b; }
+
+        /* Таблицы портфеля */
+        .pf-section-title { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 24px 0 12px; }
+        .pf-table-wrap { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; overflow-x: auto; }
+        .pf-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .pf-table th {
+            text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600;
+            color: #86868b; text-transform: uppercase; letter-spacing: 0.03em;
+            border-bottom: 1px solid #e5e5ea; background: #fafafa; white-space: nowrap;
+        }
+        .pf-table td { padding: 12px 16px; color: #1d1d1f; border-bottom: 1px solid #f0f0f2; white-space: nowrap; }
+        .pf-table tr:last-child td { border-bottom: none; }
+        .pf-table tr:hover td { background: #fafafa; }
+        .pf-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .pf-ticker { display: inline-block; padding: 2px 7px; background: #f0f0f2; border-radius: 5px; font-size: 12px; font-weight: 600; color: #515154; }
+        .pf-side-buy { color: #24b24b; font-weight: 600; }
+        .pf-side-sell { color: #ff3b30; font-weight: 600; }
+        .pf-reupload { margin-top: 16px; font-size: 13px; color: #86868b; }
+        .pf-reupload a { color: #1d1d1f; font-weight: 500; cursor: pointer; text-decoration: underline; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -560,15 +592,33 @@
                 </div>
             </div>
 
-            <!-- Пустое состояние: портфель ещё не наполнен -->
-            <div class="pf-empty">
-                <h3>Портфель пока пуст</h3>
-                <p>Добавьте активы вручную или подключите брокера по API — и мы автоматически подтянем сделки, текущие цены с биржи и рассчитаем доходность.</p>
-                <div class="pf-empty-actions">
-                    <button class="btn-pf-primary" onclick="alert('Подключение брокера по API — в разработке (Этап 4).')">Подключить брокера</button>
-                    <button class="btn-pf-secondary" onclick="alert('Ручное добавление сделок — в разработке (Этап 4).')">Добавить сделку вручную</button>
+            <!-- Зона загрузки отчёта брокера -->
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('reportFile').click()">
+                <div class="upload-icon">📄</div>
+                <h3>Загрузите отчёт брокера</h3>
+                <p>Перетащите сюда или выберите xlsx-отчёт из Т-Банка — мы автоматически распознаем ваши активы и сделки. (Брокерские отчёты за период: «Отчёт о сделках и операциях».)</p>
+                <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
+                <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            </div>
+            <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Подключение брокеров по API и иностранные котировки — на следующих этапах. Цены обновляются раз в 30 минут во время работы биржи; суммы — после вычета налога 13%.</div>
+
+            <!-- Данные портфеля (после загрузки) -->
+            <div id="pfData" style="display: none;">
+                <div class="pf-section-title">Активы в портфеле</div>
+                <div class="pf-table-wrap">
+                    <table class="pf-table">
+                        <thead><tr><th>Актив</th><th>Тикер</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Стоимость</th><th class="num">Доля</th></tr></thead>
+                        <tbody id="pfPositionsBody"></tbody>
+                    </table>
                 </div>
-                <div class="pf-note">Цены активов обновляются раз в 30 минут во время работы биржи. Иностранные активы — по ценам NYSE / NASDAQ / LSE, курсы валют — FOREX. Все суммы указаны после вычета налога 13%.</div>
+                <div class="pf-section-title">Сделки</div>
+                <div class="pf-table-wrap">
+                    <table class="pf-table">
+                        <thead><tr><th>Дата</th><th>Операция</th><th>Актив</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th><th class="num">Комиссия</th></tr></thead>
+                        <tbody id="pfTradesBody"></tbody>
+                    </table>
+                </div>
+                <div class="pf-reupload">Данные из отчёта. <a onclick="document.getElementById('reportFile').click()">Загрузить новый отчёт</a></div>
             </div>
         </div>
 
@@ -1441,6 +1491,7 @@
                 tabs.style.display = 'flex';
                 goalActions.style.display = 'block';
                 switchTab('general'); // по умолчанию открываем «Общее»
+                loadPortfolio();
             } else {
                 banner.style.display = 'flex';
                 banner.classList.remove('approved');
@@ -1451,6 +1502,100 @@
                 document.getElementById('tabGoal').classList.add('active');
             }
         }
+
+        // ===== ПОРТФЕЛЬ: импорт отчёта брокера =====
+        const num2 = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
+
+        async function loadPortfolio() {
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/portfolio?token=' + token);
+                if (!r.ok) return;
+                const data = await r.json();
+                renderPortfolio(data);
+            } catch (e) { /* портфель пуст / сеть */ }
+        }
+
+        function renderPortfolio(data) {
+            const hasData = data && data.has_data;
+            document.getElementById('pfData').style.display = hasData ? 'block' : 'none';
+            if (!hasData) return;
+
+            const total = data.total_value || 0;
+            const cur = data.value_currency || '₽';
+            const curSym = CURRENCY_SYMBOLS[cur] || cur;
+
+            // Метрика «Текущая стоимость портфеля»
+            const pfVal = document.getElementById('pfValue');
+            if (data.total_value != null) {
+                pfVal.classList.remove('muted');
+                pfVal.innerText = `${nfmt.format(Math.round(total))} ${curSym}`;
+            } else {
+                pfVal.classList.add('muted');
+                pfVal.innerText = `— ${curSym}`;
+            }
+
+            document.getElementById('pfPositionsBody').innerHTML = (data.positions || []).map(p => {
+                const price = p.price != null ? num2.format(p.price) + ' ' + curSym : '—';
+                const value = p.value != null ? nfmt.format(Math.round(p.value)) + ' ' + curSym : '—';
+                const share = (p.value != null && total > 0) ? (p.value / total * 100).toFixed(1) + '%' : '—';
+                return `<tr><td>${p.name || '—'}</td><td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
+                    `<td class="num">${nfmt.format(p.quantity || 0)}</td>` +
+                    `<td class="num">${price}</td><td class="num">${value}</td><td class="num">${share}</td></tr>`;
+            }).join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
+
+            document.getElementById('pfTradesBody').innerHTML = (data.trades || []).map(t => {
+                const buy = (t.side || '').toLowerCase().includes('покуп');
+                const sideCls = buy ? 'pf-side-buy' : 'pf-side-sell';
+                return `<tr><td>${t.date || '—'}</td><td class="${sideCls}">${t.side || '—'}</td>` +
+                    `<td>${t.name || t.ticker || '—'}</td>` +
+                    `<td class="num">${nfmt.format(t.quantity || 0)}</td>` +
+                    `<td class="num">${num2.format(t.price || 0)}</td>` +
+                    `<td class="num">${num2.format(t.amount || 0)} ${t.currency || ''}</td>` +
+                    `<td class="num">${num2.format(t.commission || 0)}</td></tr>`;
+            }).join('') || '<tr><td colspan="7">Сделок нет</td></tr>';
+        }
+
+        async function uploadReport(fileObj) {
+            const status = document.getElementById('uploadStatus');
+            status.style.display = 'block'; status.className = 'upload-status';
+            status.innerText = 'Загрузка и обработка отчёта…';
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const fd = new FormData();
+                fd.append('file', fileObj);
+                const r = await fetch(API_BASE + '/api/portfolio/import?token=' + token, { method: 'POST', body: fd });
+                const result = await r.json();
+                if (r.ok) {
+                    status.className = 'upload-status ok';
+                    status.innerText = `Готово: позиций ${result.positions_count}, сделок ${result.trades_count}. Загружаем котировки…`;
+                    await loadPortfolio(); // перезагрузка с живыми ценами MOEX
+                } else {
+                    status.className = 'upload-status err';
+                    status.innerText = result.detail || 'Не удалось обработать отчёт.';
+                }
+            } catch (e) {
+                status.className = 'upload-status err';
+                status.innerText = 'Не удалось связаться с сервером.';
+            }
+        }
+
+        (function initUpload() {
+            const input = document.getElementById('reportFile');
+            const zone = document.getElementById('uploadZone');
+            if (!input || !zone) return;
+            input.addEventListener('change', () => { if (input.files[0]) uploadReport(input.files[0]); });
+            ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
+                e.preventDefault(); zone.classList.add('dragover');
+            }));
+            ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+                e.preventDefault(); zone.classList.remove('dragover');
+            }));
+            zone.addEventListener('drop', e => {
+                const f = e.dataTransfer.files[0];
+                if (f) uploadReport(f);
+            });
+        })();
 
         async function approveGoal() {
             const btn = document.getElementById('approveBtn');
