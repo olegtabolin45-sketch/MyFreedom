@@ -329,6 +329,45 @@
         .risk-moderate { background: #f2fbf4; color: #24b24b; }
         .risk-aggressive { background: #fff2f0; color: #ff5a4d; }
 
+        /* Вкладки профиля */
+        .dash-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e5ea; margin-bottom: 24px; }
+        .dash-tab {
+            padding: 12px 22px; font-size: 15px; font-weight: 500; color: #86868b;
+            cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent;
+            margin-bottom: -1px; transition: all 0.2s ease;
+        }
+        .dash-tab:hover { color: #1d1d1f; }
+        .dash-tab.active { color: #1d1d1f; border-bottom-color: #1d1d1f; font-weight: 600; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: dashIn 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Метрики портфеля (вкладка «Общее») */
+        .pf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+        .pf-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 22px 24px; }
+        .pf-head { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+        .pf-label { font-size: 13px; font-weight: 600; color: #515154; }
+        .pf-info {
+            width: 16px; height: 16px; border-radius: 50%; background: #e5e5ea; color: #86868b;
+            font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+            cursor: help; flex-shrink: 0;
+        }
+        .pf-value { font-size: 28px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .pf-value.muted { color: #c7c7cc; }
+        .pf-sub { font-size: 13px; color: #86868b; margin-top: 6px; }
+        .pf-pos { color: #24b24b; } .pf-neg { color: #ff3b30; }
+
+        /* Пустое состояние портфеля */
+        .pf-empty { background: #fafafa; border: 1px dashed #d2d2d7; border-radius: 16px; padding: 40px 24px; text-align: center; }
+        .pf-empty h3 { font-size: 18px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
+        .pf-empty p { font-size: 14px; color: #86868b; line-height: 1.5; max-width: 440px; margin: 0 auto 20px; }
+        .pf-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .btn-pf-primary { height: 46px; padding: 0 22px; background: #1d1d1f; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .btn-pf-primary:hover { background: #000; }
+        .btn-pf-secondary { height: 46px; padding: 0 22px; background: #fff; color: #1d1d1f; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .btn-pf-secondary:hover { background: #f5f5f7; border-color: #86868b; }
+        .pf-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 16px; }
+        .tab-goal-actions { margin-top: 8px; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -478,6 +517,64 @@
             </div>
         </div>
 
+        <!-- Вкладки (появляются после утверждения цели) -->
+        <div class="dash-tabs" id="dashTabs" style="display: none;">
+            <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
+            <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
+        </div>
+
+        <!-- ВКЛАДКА «ОБЩЕЕ»: портфель -->
+        <div class="tab-panel" id="tabGeneral">
+            <div class="pf-grid">
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Текущая стоимость портфеля</span>
+                        <span class="pf-info" title="Вложено — сумма покупок всех текущих (непроданных) активов плюс свободная валюта. Текущая цена активов обновляется раз в 30 минут во время работы биржи. По иностранным активам берётся цена с зарубежных бирж (NYSE, NASDAQ, LSE…), источник курсов валют — FOREX.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfValue">— ₽</div>
+                    <div class="pf-sub" id="pfInvested">Вложено: —</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Прибыль</span>
+                        <span class="pf-info" title="Прибыль с учётом начислений, продаж, уплаченной комиссии и налогов с дивидендов за всё время существования портфеля. Нижнее значение — прибыль только от изменения цены активов за последний день работы биржи.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfProfit">— ₽</div>
+                    <div class="pf-sub" id="pfProfitDay">За день: —</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Доходность (XIRR)</span>
+                        <span class="pf-info" title="Среднегодовая доходность портфеля по формуле «Доходность портфеля с переменной суммой инвестиций» (XIRR). Учитываются все движения по бумагам — покупки, продажи, дивиденды, налог с дивидендов, комиссии.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfXirr">— %</div>
+                    <div class="pf-sub">Среднегодовая</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head">
+                        <span class="pf-label">Пассивный доход</span>
+                        <span class="pf-info" title="Доход с выплаты дивидендов и купонов за будущие 12 месяцев. Только регулярные выплаты (без спецдивидендов, амортизаций и погашений). Доходность (%) к текущей стоимости активов (без учёта валюты). Все суммы — после вычета налога 13%.">i</span>
+                    </div>
+                    <div class="pf-value muted" id="pfIncome">— ₽</div>
+                    <div class="pf-sub" id="pfIncomeYield">— % к стоимости активов</div>
+                </div>
+            </div>
+
+            <!-- Пустое состояние: портфель ещё не наполнен -->
+            <div class="pf-empty">
+                <h3>Портфель пока пуст</h3>
+                <p>Добавьте активы вручную или подключите брокера по API — и мы автоматически подтянем сделки, текущие цены с биржи и рассчитаем доходность.</p>
+                <div class="pf-empty-actions">
+                    <button class="btn-pf-primary" onclick="alert('Подключение брокера по API — в разработке (Этап 4).')">Подключить брокера</button>
+                    <button class="btn-pf-secondary" onclick="alert('Ручное добавление сделок — в разработке (Этап 4).')">Добавить сделку вручную</button>
+                </div>
+                <div class="pf-note">Цены активов обновляются раз в 30 минут во время работы биржи. Иностранные активы — по ценам NYSE / NASDAQ / LSE, курсы валют — FOREX. Все суммы указаны после вычета налога 13%.</div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА «ЦЕЛЬ»: стратегия и прогнозы -->
+        <div class="tab-panel" id="tabGoal">
+
         <!-- KPI -->
         <div class="kpi-grid">
             <div class="kpi-card reveal" style="animation-delay: 0.06s;">
@@ -537,11 +634,17 @@
 
         <!-- Реальная покупательная способность по странам -->
         <div class="dash-card pp-card reveal" style="animation-delay: 0.54s; margin-top: 16px;">
-            <div class="dash-card-title">Реальная покупательная способность</div>
-            <div class="dash-card-hint" id="ppHint">Сколько будут «стоить» сегодняшние деньги с учётом инфляции в выбранных странах</div>
+            <div class="dash-card-title">Реальный пассивный доход</div>
+            <div class="dash-card-hint" id="ppHint">Сколько ваш целевой доход будет стоить в сегодняшних деньгах с учётом инфляции в выбранных странах</div>
             <div class="chart-wrap" id="ppChartWrap"></div>
             <div class="pp-legend" id="ppLegend"></div>
         </div>
+
+        <div class="tab-goal-actions" id="tabGoalActions" style="display: none; margin-top: 16px;">
+            <button class="btn-edit" onclick="showOnboarding()">Изменить цель</button>
+        </div>
+
+        </div><!-- /tabGoal -->
     </div>
 
     <!-- ОНБОРДИНГ: пошаговый wizard -->
@@ -1140,7 +1243,7 @@
 
         // Построение SVG area-графика с подписями осей и анимацией отрисовки
         function renderAreaChart(series, currencySym) {
-            const W = 660, H = 260, padL = 56, padR = 16, padT = 16, padB = 34;
+            const W = 680, H = 260, padL = 80, padR = 18, padT = 16, padB = 34;
             const n = series.length;
             const maxV = Math.max(...series) || 1;
             const x = i => padL + (i / (n - 1)) * (W - padL - padR);
@@ -1157,7 +1260,8 @@
             [0, 0.5, 1].forEach(f => {
                 const gy = (baseY - f * (baseY - padT)).toFixed(1);
                 grid += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#f0f0f2" stroke-width="1"/>`;
-                yLabels += `<text class="chart-axis-label" x="${padL - 8}" y="${gy}" text-anchor="end" dominant-baseline="middle">${compactFmt.format(maxV * f)}</text>`;
+                const label = f === 0 ? '0' : compactFmt.format(maxV * f) + ' ' + (currencySym || '');
+                yLabels += `<text class="chart-axis-label" x="${padL - 10}" y="${gy}" text-anchor="end" dominant-baseline="middle">${label}</text>`;
             });
 
             // Подписи оси X (годы): начало, середина, конец
@@ -1202,19 +1306,21 @@
         // Палитра линий для стран
         const PP_COLORS = ['#1d1d1f', '#ff9f0a', '#2b6fd6'];
 
-        // График реальной покупательной способности по странам (мультилиния + подписи осей)
-        function renderPurchasingPower(countryCodes, years) {
-            const W = 660, H = 260, padL = 44, padR = 16, padT = 16, padB = 34;
+        // График реального пассивного дохода с поправкой на инфляцию (в валюте, по странам)
+        function renderPurchasingPower(countryCodes, years, targetIncome, sym) {
+            const W = 680, H = 260, padL = 80, padR = 18, padT = 16, padB = 34;
             const x = t => padL + (t / years) * (W - padL - padR);
-            const y = pct => padT + (1 - pct / 100) * (H - padT - padB);
+            const maxV = targetIncome || 1;
+            const y = v => padT + (1 - v / maxV) * (H - padT - padB);
             const baseY = H - padB;
 
-            // Сетка + ось Y (0%..100%)
+            // Сетка + ось Y (в валюте: 0 .. целевой доход)
             let grid = '', yLabels = '';
             [0, 0.5, 1].forEach(f => {
                 const gy = (baseY - f * (baseY - padT)).toFixed(1);
                 grid += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#f0f0f2" stroke-width="1"/>`;
-                yLabels += `<text class="chart-axis-label" x="${padL - 8}" y="${gy}" text-anchor="end" dominant-baseline="middle">${Math.round(f * 100)}%</text>`;
+                const label = f === 0 ? '0' : compactFmt.format(maxV * f) + ' ' + (sym || '');
+                yLabels += `<text class="chart-axis-label" x="${padL - 10}" y="${gy}" text-anchor="end" dominant-baseline="middle">${label}</text>`;
             });
             let xLabels = '';
             [0, Math.round(years / 2), years].forEach(yr => {
@@ -1222,17 +1328,15 @@
             });
 
             let paths = '';
-            const lineEls = [];
             countryCodes.forEach((code, idx) => {
                 const c = COUNTRY_BY_CODE[code]; if (!c) return;
                 const color = PP_COLORS[idx % PP_COLORS.length];
                 let d = '';
                 for (let t = 0; t <= years; t++) {
-                    const pct = 100 / Math.pow(1 + c.infl / 100, t);
-                    d += (t === 0 ? 'M' : 'L') + x(t).toFixed(1) + ' ' + y(pct).toFixed(1) + ' ';
+                    const real = targetIncome / Math.pow(1 + c.infl / 100, t);
+                    d += (t === 0 ? 'M' : 'L') + x(t).toFixed(1) + ' ' + y(real).toFixed(1) + ' ';
                 }
-                paths += `<path class="pp-line" data-i="${idx}" d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-                lineEls.push(idx);
+                paths += `<path class="pp-line" d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
             });
 
             document.getElementById('ppChartWrap').innerHTML = `
@@ -1250,11 +1354,12 @@
                 p.style.strokeDashoffset = '0';
             });
 
-            // Легенда
+            // Легенда: страна + инфляция + реальный доход в конце периода
             document.getElementById('ppLegend').innerHTML = countryCodes.map((code, idx) => {
                 const c = COUNTRY_BY_CODE[code]; if (!c) return '';
                 const color = PP_COLORS[idx % PP_COLORS.length];
-                return `<span class="pp-legend-item"><span class="pp-legend-dot" style="background:${color}"></span>${c.flag} ${c.name} <span class="pp-legend-infl">· инфл. ${c.infl}%</span></span>`;
+                const realEnd = targetIncome / Math.pow(1 + c.infl / 100, years);
+                return `<span class="pp-legend-item"><span class="pp-legend-dot" style="background:${color}"></span>${c.flag} ${c.name} <span class="pp-legend-infl">· инфл. ${c.infl}% · через ${years} лет ≈ ${nfmt.format(Math.round(realEnd))} ${sym}</span></span>`;
             }).join('');
         }
 
@@ -1309,30 +1414,41 @@
             requestAnimationFrame(() => { ring.style.strokeDashoffset = C * (1 - achievement / 100); });
             animateCount(document.getElementById('donutPct'), Math.round(achievement), 1400);
 
-            // График реальной покупательной способности по странам
+            // Реальный пассивный доход с поправкой на инфляцию по странам
             const countries = (goals.countries && goals.countries.length) ? goals.countries : ['RU'];
-            renderPurchasingPower(countries, goals.years_horizon);
+            renderPurchasingPower(countries, goals.years_horizon, goals.target_income, sym);
 
-            // Баннер утверждения цели
-            renderApproveBanner(goals.goal_approved);
+            // Режим отображения: предпросмотр (с баннером) или вкладки (после утверждения)
+            applyApprovalMode(goals.goal_approved);
         }
 
-        function renderApproveBanner(approved) {
+        // Переключение вкладок профиля
+        function switchTab(name) {
+            document.querySelectorAll('#dashTabs .dash-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === name);
+            });
+            document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
+            document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
+        }
+
+        // Применяет режим: до утверждения — предпросмотр цели с баннером; после — вкладки
+        function applyApprovalMode(approved) {
             const banner = document.getElementById('approveBanner');
-            banner.style.display = 'flex';
+            const tabs = document.getElementById('dashTabs');
+            const goalActions = document.getElementById('tabGoalActions');
             if (approved) {
-                banner.classList.add('approved');
-                document.getElementById('approveText').innerHTML = '<b>Цель утверждена.</b> Вы всегда можете пересмотреть параметры.';
-                document.getElementById('approveActions').innerHTML =
-                    '<span class="approve-done">✓ Активная цель</span>' +
-                    '<button class="btn-edit" onclick="showOnboarding()">Изменить</button>';
+                banner.style.display = 'none';
+                tabs.style.display = 'flex';
+                goalActions.style.display = 'block';
+                switchTab('general'); // по умолчанию открываем «Общее»
             } else {
+                banner.style.display = 'flex';
                 banner.classList.remove('approved');
-                document.getElementById('approveText').innerHTML =
-                    'Это <b>предварительный расчёт</b>. Если цель выглядит реалистичной — утвердите её. Иначе вернитесь и измените ответы.';
-                document.getElementById('approveActions').innerHTML =
-                    '<button class="btn-edit" onclick="showOnboarding()">Изменить ответы</button>' +
-                    '<button class="btn-approve" id="approveBtn" onclick="approveGoal()">Утвердить цель</button>';
+                tabs.style.display = 'none';
+                goalActions.style.display = 'none';
+                // Показываем только цель как предпросмотр
+                document.getElementById('tabGeneral').classList.remove('active');
+                document.getElementById('tabGoal').classList.add('active');
             }
         }
 
@@ -1343,7 +1459,8 @@
                 const token = encodeURIComponent(getAccessToken());
                 const r = await fetch(API_BASE + '/api/goals/approve?token=' + token, { method: 'POST' });
                 if (r.ok) {
-                    renderApproveBanner(true);
+                    applyApprovalMode(true);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else if (btn) {
                     btn.disabled = false; btn.innerText = 'Утвердить цель';
                 }
