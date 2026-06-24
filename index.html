@@ -257,6 +257,69 @@
         .ob-next:hover { background: #000000; }
         .ob-next:active, .ob-back:active { transform: scale(0.99); }
         .ob-next:disabled { background: #f5f5f7; color: #d2d2d7; cursor: not-allowed; transform: none; }
+
+        /* ===== Личный кабинет (дашборд) ===== */
+        .dash { max-width: 1000px; margin: 32px auto 64px; padding: 0 24px; width: 100%; }
+        @keyframes dashIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal { opacity: 0; animation: dashIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* Шапка профиля */
+        .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+        .dash-profile { display: flex; align-items: center; gap: 16px; }
+        .dash-avatar {
+            width: 56px; height: 56px; border-radius: 16px; background: #1d1d1f; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
+        }
+        .dash-hello { font-size: 22px; font-weight: 700; color: #1d1d1f; line-height: 1.2; }
+        .dash-sub { font-size: 14px; color: #86868b; margin-top: 2px; }
+        .dash-sub .dot-sep { margin: 0 8px; color: #d2d2d7; }
+        .dash-logout {
+            background: #fff; color: #515154; border: 1px solid #d2d2d7; border-radius: 10px;
+            height: 42px; padding: 0 18px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+        }
+        .dash-logout:hover { background: #f5f5f7; border-color: #86868b; color: #1d1d1f; }
+
+        /* KPI-карточки */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+        .kpi-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 18px 20px; transition: all 0.25s ease; }
+        .kpi-card:hover { border-color: #1d1d1f; box-shadow: 0 8px 24px rgba(0,0,0,0.04); transform: translateY(-2px); }
+        .kpi-label { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #86868b; margin-bottom: 10px; }
+        .kpi-value { font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .kpi-unit { font-size: 14px; color: #86868b; font-weight: 500; margin-left: 3px; }
+
+        /* Основной блок: график + кольцо */
+        .dash-main { display: grid; grid-template-columns: 1.7fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .dash-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 24px; }
+        .dash-card-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
+        .dash-card-hint { font-size: 13px; color: #86868b; margin-top: 2px; margin-bottom: 16px; }
+        .chart-wrap { width: 100%; }
+        .chart-wrap svg { width: 100%; height: auto; display: block; }
+
+        /* Кольцо достижения */
+        .donut-card { display: flex; flex-direction: column; }
+        .donut-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+        .donut-center { position: absolute; text-align: center; }
+        .donut-pct { font-size: 34px; font-weight: 700; color: #1d1d1f; }
+        .donut-cap { font-size: 12px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .donut-ring { transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Прогноз итог */
+        .forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .forecast-card { background: #fafafa; border: 1px solid #e5e5ea; border-radius: 16px; padding: 22px 24px; }
+        .forecast-card.accent { background: #1d1d1f; border-color: #1d1d1f; }
+        .forecast-card.accent .kpi-label { color: #a1a1a6; }
+        .forecast-card.accent .forecast-value { color: #fff; }
+        .forecast-value { font-size: 28px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .risk-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+        .risk-conservative { background: #eef6ff; color: #2b6fd6; }
+        .risk-moderate { background: #f2fbf4; color: #24b24b; }
+        .risk-aggressive { background: #fff2f0; color: #ff5a4d; }
+
+        @media (max-width: 860px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .dash-main { grid-template-columns: 1fr; }
+            .forecast-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -350,32 +413,76 @@
         </div>
     </div>
 
-    <!-- АВТОРИЗОВАННАЯ ЗОНА -->
-    <div class="card-container welcome-container authorized-mode" id="profileScreen">
-        <div class="status-pill"><span class="status-dot"></span>Сессия активна</div>
-        <h1 id="profileGreeting">Приветствуем, инвестор</h1>
-        <div class="subtitle">Панель управления распределенным портфелем активов.</div>
-        
-        <div class="welcome-grid">
-            <div class="dashboard-card" onclick="alert('Переход к учету транзакций...')">
-                <h3>Мультивалютный портфель</h3>
-                <p>Аналитика позиций: расчет средней цены, сплиты акций и точный учет комиссий.</p>
+    <!-- ЛИЧНЫЙ КАБИНЕТ (ДАШБОРД) -->
+    <div class="dash authorized-mode" id="profileScreen">
+
+        <div class="dash-header reveal" style="animation-delay: 0.02s;">
+            <div class="dash-profile">
+                <div class="dash-avatar" id="dashAvatar">A</div>
+                <div>
+                    <div class="dash-hello" id="profileGreeting">Приветствуем, инвестор</div>
+                    <div class="dash-sub" id="dashProfileSub">Финансовая стратегия</div>
+                </div>
             </div>
-            <div class="dashboard-card" onclick="alert('Открытие календаря выплат...')">
-                <h3>Календарь доходов</h3>
-                <p>Прогнозирование купонов, дивидендов и расчет чистой прибыли с учетом налогов.</p>
+            <button class="dash-logout" onclick="logout()">Выйти</button>
+        </div>
+
+        <!-- KPI -->
+        <div class="kpi-grid">
+            <div class="kpi-card reveal" style="animation-delay: 0.06s;">
+                <div class="kpi-label">Стартовый капитал</div>
+                <div class="kpi-value"><span id="kpiInitial">0</span><span class="kpi-unit" id="kpiCur1">₽</span></div>
             </div>
-            <div class="dashboard-card" onclick="alert('Запуск бенчмаркинга...')">
-                <h3>Бенчмаркинг</h3>
-                <p>Сравнение доходности вашего капитала (TWR/MWR) с мировыми индексами.</p>
+            <div class="kpi-card reveal" style="animation-delay: 0.12s;">
+                <div class="kpi-label">Пополнение / мес</div>
+                <div class="kpi-value"><span id="kpiMonthly">0</span><span class="kpi-unit" id="kpiCur2">₽</span></div>
             </div>
-            <div class="dashboard-card" onclick="alert('Открытие настроек приватности...')">
-                <h3>Экспорт и приватность</h3>
-                <p>Полный контроль над конфиденциальностью данных и экспорт отчетов.</p>
+            <div class="kpi-card reveal" style="animation-delay: 0.18s;">
+                <div class="kpi-label">Цель дохода / мес</div>
+                <div class="kpi-value"><span id="kpiTarget">0</span><span class="kpi-unit" id="kpiCur3">₽</span></div>
+            </div>
+            <div class="kpi-card reveal" style="animation-delay: 0.24s;">
+                <div class="kpi-label">Горизонт</div>
+                <div class="kpi-value"><span id="kpiHorizon">0</span><span class="kpi-unit">лет</span></div>
             </div>
         </div>
 
-        <button class="btn-submit btn-logout" onclick="logout()">Завершить сессию</button>
+        <!-- График роста + кольцо достижения -->
+        <div class="dash-main">
+            <div class="dash-card reveal" style="animation-delay: 0.30s;">
+                <div class="dash-card-title">Прогноз роста капитала</div>
+                <div class="dash-card-hint" id="chartHint">Накопление с учётом сложного процента</div>
+                <div class="chart-wrap" id="chartWrap"></div>
+            </div>
+            <div class="dash-card donut-card reveal" style="animation-delay: 0.36s;">
+                <div class="dash-card-title">Достижение цели</div>
+                <div class="dash-card-hint">Прогноз против целевого капитала</div>
+                <div class="donut-wrap">
+                    <svg width="200" height="200" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#ececed" stroke-width="18"/>
+                        <circle id="donutRing" class="donut-ring" cx="100" cy="100" r="80" fill="none"
+                                stroke="#24b24b" stroke-width="18" stroke-linecap="round"
+                                stroke-dasharray="502.65" stroke-dashoffset="502.65"/>
+                    </svg>
+                    <div class="donut-center">
+                        <div class="donut-pct"><span id="donutPct">0</span>%</div>
+                        <div class="donut-cap">к цели</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Прогноз итог -->
+        <div class="forecast-grid">
+            <div class="forecast-card accent reveal" style="animation-delay: 0.42s;">
+                <div class="kpi-label">Прогноз капитала через <span id="fcYears">0</span> лет</div>
+                <div class="forecast-value"><span id="fcCapital">0</span><span class="kpi-unit" id="kpiCur4">₽</span></div>
+            </div>
+            <div class="forecast-card reveal" style="animation-delay: 0.48s;">
+                <div class="kpi-label">Целевой капитал (правило 4%)</div>
+                <div class="forecast-value"><span id="fcTarget">0</span><span class="kpi-unit" id="kpiCur5">₽</span></div>
+            </div>
+        </div>
     </div>
 
     <!-- ОНБОРДИНГ: пошаговый wizard -->
@@ -624,6 +731,11 @@
         function showProfile() {
             document.getElementById('onboardingScreen').style.display = 'none';
             document.getElementById('profileScreen').style.display = 'block';
+            // Перезапуск reveal-анимаций
+            document.querySelectorAll('#profileScreen .reveal').forEach(el => {
+                el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+            });
+            loadDashboard();
         }
 
         function showOnboarding() {
@@ -857,6 +969,130 @@
             obIndex = 0;
             syncCurrencySymbol();
             obRender(0);
+        }
+
+        // ===== ДАШБОРД =====
+        const RISK_RETURNS = { conservative: 0.06, moderate: 0.10, aggressive: 0.14 };
+        const RISK_LABELS = { conservative: 'Консервативный', moderate: 'Умеренный', aggressive: 'Агрессивный' };
+        const nfmt = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function animateCount(el, target, duration) {
+            const start = performance.now();
+            function tick(now) {
+                const p = Math.min((now - start) / duration, 1);
+                el.innerText = nfmt.format(Math.round(target * easeOutCubic(p)));
+                if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // Помесячная симуляция роста капитала, возвращает капитал на конец каждого года
+        function projectSeries(initial, monthly, annualRate, years) {
+            const mr = annualRate / 12;
+            let cap = initial;
+            const series = [initial];
+            for (let y = 1; y <= years; y++) {
+                for (let m = 0; m < 12; m++) { cap = cap * (1 + mr) + monthly; }
+                series.push(cap);
+            }
+            return series;
+        }
+
+        // Построение SVG area-графика с анимацией отрисовки
+        function renderAreaChart(series) {
+            const W = 640, H = 240, padL = 8, padR = 8, padT = 16, padB = 24;
+            const n = series.length;
+            const maxV = Math.max(...series) || 1;
+            const x = i => padL + (i / (n - 1)) * (W - padL - padR);
+            const y = v => padT + (1 - v / maxV) * (H - padT - padB);
+
+            let line = '';
+            series.forEach((v, i) => { line += (i === 0 ? 'M' : 'L') + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; });
+            const area = line + `L ${x(n - 1).toFixed(1)} ${(H - padB)} L ${x(0).toFixed(1)} ${(H - padB)} Z`;
+
+            const lastX = x(n - 1).toFixed(1), lastY = y(series[n - 1]).toFixed(1);
+            const svg = `
+                <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#1d1d1f" stop-opacity="0.12"/>
+                            <stop offset="100%" stop-color="#1d1d1f" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#e5e5ea" stroke-width="1"/>
+                    <path id="chartArea" d="${area}" fill="url(#areaGrad)" opacity="0" style="transition: opacity 1s ease 0.3s;"/>
+                    <path id="chartLine" d="${line}" fill="none" stroke="#1d1d1f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle id="chartDot" cx="${lastX}" cy="${lastY}" r="4.5" fill="#24b24b" opacity="0" style="transition: opacity 0.4s ease 1.2s;"/>
+                </svg>`;
+            const wrap = document.getElementById('chartWrap');
+            wrap.innerHTML = svg;
+
+            // Анимация «прорисовки» линии
+            const path = document.getElementById('chartLine');
+            const len = path.getTotalLength();
+            path.style.strokeDasharray = len;
+            path.style.strokeDashoffset = len;
+            path.getBoundingClientRect(); // reflow
+            path.style.transition = 'stroke-dashoffset 1.3s cubic-bezier(0.16, 1, 0.3, 1)';
+            path.style.strokeDashoffset = '0';
+            requestAnimationFrame(() => {
+                document.getElementById('chartArea').style.opacity = '1';
+                document.getElementById('chartDot').style.opacity = '1';
+            });
+        }
+
+        async function loadDashboard() {
+            const user = localStorage.getItem('aeterna_user') || sessionStorage.getItem('aeterna_user') || 'Инвестор';
+            document.getElementById('dashAvatar').innerText = user.trim().charAt(0).toUpperCase() || 'A';
+
+            let goals;
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/goals?token=' + token);
+                if (!r.ok) return;
+                goals = await r.json();
+            } catch (e) { return; }
+
+            const sym = CURRENCY_SYMBOLS[goals.currency] || '₽';
+            ['kpiCur1','kpiCur2','kpiCur3','kpiCur4','kpiCur5'].forEach(id => { document.getElementById(id).innerText = sym; });
+
+            // Подзаголовок профиля: риск-профиль + валюта
+            const riskKey = goals.risk_profile;
+            document.getElementById('dashProfileSub').innerHTML =
+                `<span class="risk-badge risk-${riskKey}">${RISK_LABELS[riskKey] || riskKey}</span>` +
+                `<span class="dot-sep">·</span>Учёт в ${goals.currency}`;
+
+            // KPI
+            animateCount(document.getElementById('kpiInitial'), goals.initial_capital, 1100);
+            animateCount(document.getElementById('kpiMonthly'), goals.monthly_deposit, 1100);
+            animateCount(document.getElementById('kpiTarget'), goals.target_income, 1100);
+            animateCount(document.getElementById('kpiHorizon'), goals.years_horizon, 900);
+
+            // Прогноз
+            const rate = RISK_RETURNS[riskKey] || 0.08;
+            const series = projectSeries(goals.initial_capital, goals.monthly_deposit, rate, goals.years_horizon);
+            const forecastCapital = series[series.length - 1];
+            const targetCapital = goals.target_income * 12 / 0.04; // правило 4%
+            const achievement = Math.max(0, Math.min(forecastCapital / targetCapital * 100, 100));
+
+            document.getElementById('fcYears').innerText = goals.years_horizon;
+            animateCount(document.getElementById('fcCapital'), forecastCapital, 1400);
+            animateCount(document.getElementById('fcTarget'), targetCapital, 1400);
+            document.getElementById('chartHint').innerText =
+                `Доходность ${(rate * 100).toFixed(0)}% годовых · горизонт ${goals.years_horizon} лет`;
+
+            renderAreaChart(series);
+
+            // Кольцо достижения
+            const C = 2 * Math.PI * 80;
+            const ring = document.getElementById('donutRing');
+            ring.style.strokeDashoffset = C; // сброс
+            ring.getBoundingClientRect();
+            ring.style.stroke = achievement >= 100 ? '#24b24b' : (achievement >= 50 ? '#1d1d1f' : '#ff9f0a');
+            requestAnimationFrame(() => { ring.style.strokeDashoffset = C * (1 - achievement / 100); });
+            animateCount(document.getElementById('donutPct'), Math.round(achievement), 1400);
         }
     </script>
 </body>

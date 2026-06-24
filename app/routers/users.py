@@ -40,6 +40,45 @@ async def get_user_status(token: str):
             conn.close()
 
 
+@router.get("/goals")
+async def get_goals(token: str):
+    """Возвращает финансовые цели пользователя (данные онбординга) для дашборда."""
+    email = decode_access_token(token)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT currency, initial_capital, monthly_deposit,
+                   target_income, years_horizon, risk_profile
+            FROM user_goals WHERE email = %s
+            """,
+            (email,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Цели ещё не заданы.")
+
+        return {
+            "currency": row[0],
+            "initial_capital": row[1],
+            "monthly_deposit": row[2],
+            "target_income": row[3],
+            "years_horizon": row[4],
+            "risk_profile": row[5],
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error("Ошибка получения целей: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка получения целей.") from e
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 @router.post("/onboarding")
 async def save_onboarding(data: OnboardingRequest, token: str, request: Request):
     email = decode_access_token(token)
