@@ -3,9 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
+from app.middleware import SecurityHeadersMiddleware
 from app.routers import auth, frontend, users
 
-app = FastAPI(title="MyFreedom Core API", version="1.0.2")
+app = FastAPI(title="MyFreedom Core API", version="1.1.0")
+
+# Заголовки безопасности на все ответы
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
