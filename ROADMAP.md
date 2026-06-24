@@ -79,7 +79,7 @@
 - [ ] Очереди для тяжёлых задач (Celery + Redis/RabbitMQ): загрузка котировок, отчёты
 - [ ] Реплики БД для чтения
 - [ ] Health-checks и graceful shutdown
-- [ ] CI/CD pipeline (GitHub Actions)
+- [x] CI/CD pipeline (GitHub Actions). ✅ `.github/workflows/ci.yml`: на каждый PR/push в master поднимает PostgreSQL + Redis, применяет миграции Alembic и прогоняет pytest.
 - [ ] Контейнеризация + оркестрация (Kubernetes — когда вырастет нагрузка)
 
 ## 🧪 Этап 6 — Качество и наблюдаемость
