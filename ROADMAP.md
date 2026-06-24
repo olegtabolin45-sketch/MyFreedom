@@ -43,7 +43,7 @@
 - [ ] Подтверждение email при регистрации
 - [ ] Сброс пароля по email
 - [ ] Двухфакторная аутентификация (2FA / TOTP)
-- [ ] Заголовки безопасности (HSTS, CSP, X-Frame-Options) через middleware
+- [x] Заголовки безопасности (HSTS, CSP, X-Frame-Options) через middleware. ✅ `app/middleware.py` (`SecurityHeadersMiddleware`): CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy на все ответы.
 - [ ] Защита от CSRF
 - [ ] Аудит-лог действий пользователя
 - [ ] Валидация и санитизация **всех** входных данных
