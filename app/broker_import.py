@@ -101,6 +101,11 @@ def _to_float(v) -> float:
         return 0.0
 
 
+def _clean_ticker(v) -> str:
+    """Нормализует код актива: убирает суффикс борда после «@» (напр. TRUR@ → TRUR)."""
+    return str(v or "").strip().split("@")[0].strip()
+
+
 def _parse_trades_section(ws, title: str) -> list[dict]:
     start = _find_section_row(ws, title)
     if start is None:
@@ -117,7 +122,7 @@ def _parse_trades_section(ws, title: str) -> list[dict]:
                 "time": str(rec.get("time") or "").strip(),
                 "side": str(rec.get("side") or "").strip(),
                 "name": str(rec.get("name") or "").strip(),
-                "ticker": str(rec.get("ticker") or "").strip(),
+                "ticker": _clean_ticker(rec.get("ticker")),
                 "price": _to_float(rec.get("price")),
                 "currency": str(
                     rec.get("settle_currency") or rec.get("price_currency") or ""
@@ -149,7 +154,7 @@ def parse_broker_report(file_bytes: bytes) -> dict:
                 positions.append(
                     {
                         "name": str(rec.get("name") or "").strip(),
-                        "ticker": str(rec.get("ticker") or "").strip(),
+                        "ticker": _clean_ticker(rec.get("ticker")),
                         "isin": str(rec.get("isin") or "").strip(),
                         "quantity": qty,
                     }
