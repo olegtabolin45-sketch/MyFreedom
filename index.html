@@ -375,7 +375,7 @@
             input.value = '';
             document.getElementById(btnId).style.display = 'none';
             input.focus();
-            if(inputId === 'regPassword') { passwordInput.dispatchEvent(new Event('input')); }
+            if(inputId === 'regPassword') { input.dispatchEvent(new Event('input')); }
         }
 
         function togglePassword(inputId, btnId) {
