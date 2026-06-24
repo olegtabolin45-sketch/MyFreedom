@@ -63,6 +63,16 @@ class LoginRequest(_StrictModel):
     password: str = Field(..., min_length=1, max_length=128)
 
 
+class RefreshRequest(_StrictModel):
+    refresh_token: str = Field(..., min_length=1, max_length=512)
+
+
+class LogoutRequest(_StrictModel):
+    refresh_token: str = Field(..., min_length=1, max_length=512)
+    # Необязательно: текущий access-токен — попадёт в blacklist до истечения
+    access_token: str | None = Field(default=None, max_length=2048)
+
+
 class OnboardingRequest(_StrictModel):
     currency: str
     initial_capital: float = Field(..., ge=0, le=1e15)

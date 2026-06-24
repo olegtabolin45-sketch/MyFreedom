@@ -4,14 +4,14 @@ from fastapi import APIRouter, HTTPException
 from app.db import get_db_connection
 from app.logging_config import logger
 from app.schemas import OnboardingRequest
-from app.security import decode_jwt_token
+from app.security import decode_access_token
 
 router = APIRouter(prefix="/api", tags=["users"])
 
 
 @router.get("/user/status")
 async def get_user_status(token: str):
-    email = decode_jwt_token(token)
+    email = decode_access_token(token)
 
     conn = None
     try:
@@ -40,7 +40,7 @@ async def get_user_status(token: str):
 
 @router.post("/onboarding")
 async def save_onboarding(data: OnboardingRequest, token: str):
-    email = decode_jwt_token(token)
+    email = decode_access_token(token)
 
     conn = None
     try:
