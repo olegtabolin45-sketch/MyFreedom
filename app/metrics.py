@@ -37,12 +37,21 @@ def xirr(flows: list[tuple[date, float]]) -> float | None:
         return None
 
     flows = sorted(flows, key=lambda x: x[0])
-    # Бисекция на широком диапазоне ставок — устойчивее метода Ньютона
-    low, high = -0.9999, 10.0
-    f_low = _xnpv(low, flows)
-    f_high = _xnpv(high, flows)
-    if f_low * f_high > 0:
-        return None  # корень не локализуется в диапазоне
+    # Сканируем диапазон ставок, чтобы найти интервал со сменой знака NPV
+    grid = [-0.99 + i * 0.05 for i in range(int((10.0 + 0.99) / 0.05) + 1)]
+    prev_r, prev_f = grid[0], _xnpv(grid[0], flows)
+    low = high = None
+    for r in grid[1:]:
+        f = _xnpv(r, flows)
+        if prev_f == 0:
+            return prev_r
+        if prev_f * f < 0:
+            low, high, f_low = prev_r, r, prev_f
+            break
+        prev_r, prev_f = r, f
+    if low is None:
+        return None  # корень не найден в разумном диапазоне
+
     for _ in range(200):
         mid = (low + high) / 2
         f_mid = _xnpv(mid, flows)
@@ -55,39 +64,58 @@ def xirr(flows: list[tuple[date, float]]) -> float | None:
     return (low + high) / 2
 
 
-def compute_metrics(trades: list[dict], total_value: float | None) -> dict:
-    """Возвращает {invested, profit, profit_pct, xirr} по сделкам и текущей стоимости."""
+def compute_metrics(
+    trades: list[dict],
+    total_value: float | None,
+    cashflows: list[dict] | None = None,
+) -> dict:
+    """Метрики по сделкам бумаг, дивидендам/налогам и текущей стоимости.
+
+    Валютные сделки (is_fx) исключаются — это конвертация валют, а не P&L бумаг.
+    Прибыль = текущая стоимость − чистые вложения + дивиденды − налоги.
+    """
+    cashflows = cashflows or []
     invested_cash = 0.0  # потрачено на покупки (с комиссией)
     returned_cash = 0.0  # получено с продаж (за вычетом комиссии)
-    flows: list[tuple[date, float]] = []
+    first_date: date | None = None
 
     for t in trades:
-        d = _parse_date(t.get("date") or "")
+        if t.get("is_fx"):
+            continue  # конвертация валют — не учитываем
         amount = float(t.get("amount") or 0)
         commission = float(t.get("commission") or 0)
+        d = _parse_date(t.get("date") or "")
+        if d and (first_date is None or d < first_date):
+            first_date = d
         if _is_buy(t.get("side", "")):
             invested_cash += amount + commission
-            if d:
-                flows.append((d, -(amount + commission)))
         else:
             returned_cash += amount - commission
-            if d:
-                flows.append((d, amount - commission))
 
-    result = {"invested": None, "profit": None, "profit_pct": None, "xirr": None}
+    dividends = sum(c["amount"] for c in cashflows if c.get("kind") == "dividend")
+    taxes = sum(c["amount"] for c in cashflows if c.get("kind") == "tax")
+
+    result = {
+        "invested": None,
+        "profit": None,
+        "profit_pct": None,
+        "xirr": None,
+        "dividends": round(dividends, 2),
+    }
 
     if total_value is not None:
         net_invested = invested_cash - returned_cash
         result["invested"] = round(net_invested, 2)
+        profit = total_value - net_invested + dividends - taxes
+        result["profit"] = round(profit, 2)
         if net_invested > 0:
-            profit = total_value - net_invested
-            result["profit"] = round(profit, 2)
             result["profit_pct"] = round(profit / net_invested * 100, 2)
-        # XIRR: потоки сделок + текущая стоимость как поступление сегодня
-        if flows:
-            terminal = list(flows) + [(date.today(), total_value)]
-            rate = xirr(terminal)
-            if rate is not None:
-                result["xirr"] = round(rate * 100, 2)
+            # Среднегодовая доходность (CAGR) на вложенный капитал за период владения
+            if first_date is not None:
+                years = (date.today() - first_date).days / 365.0
+                terminal = total_value + dividends - taxes
+                if years > 0.05 and terminal > 0:
+                    cagr = (terminal / net_invested) ** (1 / years) - 1
+                    result["xirr"] = round(cagr * 100, 2)
 
     return result

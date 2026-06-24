@@ -591,8 +591,8 @@
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
-                        <span class="pf-label">Доходность (XIRR)</span>
-                        <span class="pf-info" title="Среднегодовая доходность портфеля по формуле «Доходность портфеля с переменной суммой инвестиций» (XIRR). Учитываются все движения по бумагам — покупки, продажи, дивиденды, налог с дивидендов, комиссии.">i</span>
+                        <span class="pf-label">Доходность (годовая)</span>
+                        <span class="pf-info" title="Среднегодовая доходность (CAGR) на вложенный капитал за период владения: учитывает текущую стоимость, дивиденды и налоги. Для точности загрузите отчёты за весь период.">i</span>
                     </div>
                     <div class="pf-value muted" id="pfXirr">— %</div>
                     <div class="pf-sub">Среднегодовая</div>
@@ -1626,7 +1626,7 @@
                 const result = await r.json();
                 if (r.ok) {
                     status.className = 'upload-status ok';
-                    status.innerText = `Готово: позиций ${result.positions_count}, сделок ${result.trades_count}. Загружаем котировки…`;
+                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Можно загрузить ещё отчёты за другие периоды. Обновляем…`;
                     await loadPortfolio(); // перезагрузка с живыми ценами MOEX
                 } else {
                     status.className = 'upload-status err';

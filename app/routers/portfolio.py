@@ -56,7 +56,7 @@ async def get_portfolio(token: str):
 
         cursor.execute(
             "SELECT trade_date, trade_time, side, name, ticker, price, currency, "
-            "quantity, amount, commission FROM portfolio_trades "
+            "quantity, amount, commission, is_fx FROM portfolio_trades "
             "WHERE email = %s ORDER BY id",
             (email,),
         )
@@ -72,11 +72,17 @@ async def get_portfolio(token: str):
                 "quantity": r[7],
                 "amount": r[8],
                 "commission": r[9],
+                "is_fx": bool(r[10]),
             }
             for r in cursor.fetchall()
         ]
+        cursor.execute(
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
+            (email,),
+        )
+        cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
         tv = round(total_value, 2) if has_quotes else None
-        m = metrics.compute_metrics(trades, tv)
+        m = metrics.compute_metrics(trades, tv, cashflows)
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
@@ -88,6 +94,7 @@ async def get_portfolio(token: str):
             "profit": m["profit"],
             "profit_pct": m["profit_pct"],
             "xirr": m["xirr"],
+            "dividends": m["dividends"],
         }
     except HTTPException:
         raise
@@ -122,6 +129,8 @@ async def import_report(token: str, request: Request, file: UploadFile):
 
     positions = parsed["positions"]
     trades = parsed["trades"]
+    cashflows = parsed.get("cashflows", [])
+    report_date = parsed.get("report_date", "")
     if not positions and not trades:
         raise HTTPException(status_code=400, detail="В отчёте не найдено позиций или сделок.")
 
@@ -129,22 +138,26 @@ async def import_report(token: str, request: Request, file: UploadFile):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Текущий отчёт замещает предыдущие данные пользователя
-        cursor.execute("DELETE FROM portfolio_positions WHERE email = %s", (email,))
-        cursor.execute("DELETE FROM portfolio_trades WHERE email = %s", (email,))
 
-        for p in positions:
-            cursor.execute(
-                "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
-            )
+        # --- Сделки: накапливаем из всех отчётов, дедуп по ключу ---
+        cursor.execute(
+            "SELECT trade_date, trade_time, ticker, side, quantity, amount "
+            "FROM portfolio_trades WHERE email = %s",
+            (email,),
+        )
+        existing_trades = {tuple(r) for r in cursor.fetchall()}
+        new_trades = 0
         for t in trades:
+            key = (t["date"], t["time"], t["ticker"], t["side"], t["quantity"], t["amount"])
+            if key in existing_trades:
+                continue
+            existing_trades.add(key)
+            new_trades += 1
             cursor.execute(
                 "INSERT INTO portfolio_trades "
                 "(email, trade_date, trade_time, side, ticker, name, price, currency, "
-                "quantity, amount, commission) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "quantity, amount, commission, is_fx) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     email,
                     t["date"],
@@ -157,21 +170,61 @@ async def import_report(token: str, request: Request, file: UploadFile):
                     t["quantity"],
                     t["amount"],
                     t["commission"],
+                    bool(t.get("is_fx")),
                 ),
             )
+
+        # --- Денежные потоки (дивиденды/налоги): накапливаем, дедуп ---
+        cursor.execute(
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
+            (email,),
+        )
+        existing_cf = {tuple(r) for r in cursor.fetchall()}
+        for cf in cashflows:
+            key = (cf["date"], cf["kind"], cf["amount"])
+            if key in existing_cf:
+                continue
+            existing_cf.add(key)
+            cursor.execute(
+                "INSERT INTO portfolio_cashflows (email, flow_date, kind, amount) "
+                "VALUES (%s, %s, %s, %s)",
+                (email, cf["date"], cf["kind"], cf["amount"]),
+            )
+
+        # --- Позиции: берём из самого свежего отчёта ---
+        cursor.execute("SELECT positions_asof FROM portfolio_meta WHERE email = %s", (email,))
+        meta = cursor.fetchone()
+        prev_asof = meta[0] if meta else None
+        if positions and (prev_asof is None or report_date >= prev_asof):
+            cursor.execute("DELETE FROM portfolio_positions WHERE email = %s", (email,))
+            for p in positions:
+                cursor.execute(
+                    "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
+                )
+            if meta:
+                cursor.execute(
+                    "UPDATE portfolio_meta SET positions_asof = %s WHERE email = %s",
+                    (report_date, email),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO portfolio_meta (email, positions_asof) VALUES (%s, %s)",
+                    (email, report_date),
+                )
+
         conn.commit()
         audit.record_event(
             request,
             audit.PORTFOLIO_IMPORT,
             email=email,
-            detail=f"positions={len(positions)} trades={len(trades)}",
+            detail=f"new_trades={new_trades} report_date={report_date}",
         )
         return {
             "status": "success",
-            "positions_count": len(positions),
-            "trades_count": len(trades),
-            "positions": positions,
-            "trades": trades,
+            "new_trades": new_trades,
+            "report_date": report_date,
         }
     except Exception as e:
         logger.error("Ошибка сохранения портфеля: %s", e, exc_info=True)

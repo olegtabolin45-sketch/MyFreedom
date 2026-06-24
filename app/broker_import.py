@@ -106,6 +106,49 @@ def _clean_ticker(v) -> str:
     return str(v or "").strip().split("@")[0].strip()
 
 
+# Валютные/металлические пары (конвертация валют, а не покупка бумаг) — в P&L не учитываются
+_FX_RE = re.compile(r"(_TOM|_TDM|_TOD)$|^(USD|EUR|CNY|GBP|CHF|HKD|JPY|GLD|SLV)\w*RUB|USD000")
+
+
+def is_fx_ticker(ticker: str) -> bool:
+    return bool(_FX_RE.search(ticker or ""))
+
+
+def _parse_date_any(s: str):
+    """Парсит дату из строки DD.MM.YYYY → сравнимый ключ (или пустая строка)."""
+    s = str(s or "").strip()
+    m = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", s)
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ""
+
+
+def _parse_cashflows(ws) -> list[dict]:
+    """Дивиденды/купоны и налоги из секции «2. Операции с денежными средствами»."""
+    start = _find_section_row(ws, "операции с денежными")
+    if start is None:
+        return []
+    out = []
+    for r in range(start + 1, ws.max_row + 1):
+        a = ws.cell(row=r, column=1).value
+        if a and _is_section_title(a) and not str(a).strip().startswith("2"):
+            break
+        op = ws.cell(row=r, column=38).value  # колонка AL — «Операция»
+        if not op or str(op).strip() == "Операция":
+            continue
+        op_l = str(op).strip().lower()
+        date = _parse_date_any(ws.cell(row=r, column=23).value or ws.cell(row=r, column=1).value)
+        credit = _to_float(ws.cell(row=r, column=53).value)  # BA — зачисление
+        debit = _to_float(ws.cell(row=r, column=66).value)  # BN — списание
+        if "выплата доходов" in op_l and credit:
+            out.append({"date": date, "kind": "dividend", "amount": round(credit, 2)})
+        elif "налог" in op_l and debit:
+            out.append({"date": date, "kind": "tax", "amount": round(debit, 2)})
+        elif "пополнение счета" in op_l and credit:
+            out.append({"date": date, "kind": "deposit", "amount": round(credit, 2)})
+        elif "вывод средств" in op_l and debit:
+            out.append({"date": date, "kind": "withdrawal", "amount": round(debit, 2)})
+    return out
+
+
 def _parse_trades_section(ws, title: str) -> list[dict]:
     start = _find_section_row(ws, title)
     if start is None:
@@ -136,7 +179,7 @@ def _parse_trades_section(ws, title: str) -> list[dict]:
 
 
 def parse_broker_report(file_bytes: bytes) -> dict:
-    """Парсит xlsx-отчёт Т-Банка. Возвращает {positions, trades}."""
+    """Парсит xlsx-отчёт Т-Банка. Возвращает {positions, trades, cashflows, report_date}."""
     wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
     ws = wb.active
 
@@ -163,13 +206,28 @@ def parse_broker_report(file_bytes: bytes) -> dict:
     # --- Сделки (1.1 совершённые + 1.3 за расчётный период), дедуп по ключу ---
     trades = []
     seen = set()
+    report_date = ""
     for title in ("информация о совершенных", "сделки за расчетный"):
         for t in _parse_trades_section(ws, title):
             key = (t["date"], t["time"], t["ticker"], t["side"], t["quantity"], t["amount"])
             if key in seen:
                 continue
             seen.add(key)
+            t["is_fx"] = is_fx_ticker(t["ticker"])
             trades.append(t)
+            d = _parse_date_any(t["date"])
+            if d > report_date:
+                report_date = d
+
+    cashflows = _parse_cashflows(ws)
+    for cf in cashflows:
+        if cf["date"] > report_date:
+            report_date = cf["date"]
 
     wb.close()
-    return {"positions": positions, "trades": trades}
+    return {
+        "positions": positions,
+        "trades": trades,
+        "cashflows": cashflows,
+        "report_date": report_date,
+    }
