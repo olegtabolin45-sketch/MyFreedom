@@ -20,7 +20,14 @@ if not JWT_SECRET:
         "Создайте файл .env (см. .env.example) с надёжным секретным ключом."
     )
 JWT_ALGORITHM = "HS256"
-TOKEN_EXPIRE_MINUTES = int(os.environ.get("TOKEN_EXPIRE_MINUTES", "60"))
+# Короткоживущий access-токен + долгий refresh-токен (хранится в Redis)
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+
+# --- Redis (refresh-токены, blacklist access-токенов) ---
+REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
+REDIS_DB = int(os.environ.get("REDIS_DB", "0"))
 
 # --- CORS ---
 ALLOWED_ORIGINS = [

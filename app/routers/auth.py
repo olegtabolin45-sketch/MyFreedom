@@ -5,10 +5,36 @@ from fastapi import APIRouter, HTTPException, Request, status
 from app.db import get_db_connection
 from app.logging_config import logger
 from app.rate_limit import check_rate_limit
-from app.schemas import LoginRequest, RegisterRequest
-from app.security import generate_jwt_token, hash_password, verify_password
+from app.schemas import LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest
+from app.security import (
+    blacklist_access_token,
+    consume_refresh_token,
+    generate_access_token,
+    generate_refresh_token,
+    hash_password,
+    revoke_refresh_token,
+    verify_password,
+)
 
 router = APIRouter(prefix="/api", tags=["auth"])
+
+
+def _token_payload(username: str, email: str, is_onboarded: bool) -> dict:
+    """Единый формат ответа с парой токенов.
+
+    Поле `token` дублирует access-токен ради обратной совместимости со старым
+    фронтендом; новый код должен использовать `access_token` / `refresh_token`.
+    """
+    access = generate_access_token(username, email)
+    refresh = generate_refresh_token(email)
+    return {
+        "status": "success",
+        "token": access,
+        "access_token": access,
+        "refresh_token": refresh,
+        "username": username,
+        "is_onboarded": is_onboarded,
+    }
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -42,13 +68,7 @@ async def register_user(data: RegisterRequest, request: Request):
         )
         conn.commit()
 
-        token = generate_jwt_token(data.username, normalized_email)
-        return {
-            "status": "success",
-            "token": token,
-            "username": data.username,
-            "is_onboarded": False,
-        }
+        return _token_payload(data.username, normalized_email, is_onboarded=False)
 
     except HTTPException as he:
         raise he
@@ -95,13 +115,7 @@ async def login_user(data: LoginRequest, request: Request):
                 detail="Неверный адрес электронной почты или пароль.",
             )
 
-        token = generate_jwt_token(username, normalized_email)
-        return {
-            "status": "success",
-            "token": token,
-            "username": username,
-            "is_onboarded": bool(is_onboarded),
-        }
+        return _token_payload(username, normalized_email, is_onboarded=bool(is_onboarded))
 
     except HTTPException as he:
         raise he
@@ -114,3 +128,46 @@ async def login_user(data: LoginRequest, request: Request):
     finally:
         if conn is not None:
             conn.close()
+
+
+@router.post("/refresh")
+async def refresh_tokens(data: RefreshRequest, request: Request):
+    """Обменивает refresh-токен на новую пару токенов (с ротацией refresh)."""
+    check_rate_limit(request, "refresh", max_requests=30, window_seconds=60)
+    email = consume_refresh_token(data.refresh_token)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT username, is_onboarded FROM users WHERE email = %s",
+            (email,),
+        )
+        user = cursor.fetchone()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Пользователь не найден.",
+            )
+        return _token_payload(user[0], email, is_onboarded=bool(user[1]))
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error("Ошибка обновления токена: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка обновления токена.",
+        )
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@router.post("/logout")
+async def logout(data: LogoutRequest):
+    """Отзывает refresh-токен и (если передан) заносит access-токен в blacklist."""
+    revoke_refresh_token(data.refresh_token)
+    if data.access_token:
+        blacklist_access_token(data.access_token)
+    return {"status": "success", "message": "Сессия завершена."}

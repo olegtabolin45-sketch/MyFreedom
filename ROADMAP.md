@@ -38,8 +38,8 @@
 
 ## 🔐 Этап 2 — Безопасность (углублённо)
 
-- [ ] Refresh-токены + короткоживущие access-токены (сейчас один токен на 60 мин)
-- [ ] Хранение refresh-токенов и blacklist в **Redis**
+- [x] Refresh-токены + короткоживущие access-токены. ✅ Access — JWT на 15 мин с `jti`; refresh — opaque-токен с ротацией. Эндпоинты `/api/refresh`, `/api/logout`.
+- [x] Хранение refresh-токенов и blacklist в **Redis**. ✅ `app/redis_client.py`; refresh в `refresh:<token>` (TTL 30 дней), blacklist access по `jti` в `bl:<jti>`. Контейнер `aeterna-redis` (appendonly).
 - [ ] Подтверждение email при регистрации
 - [ ] Сброс пароля по email
 - [ ] Двухфакторная аутентификация (2FA / TOTP)
