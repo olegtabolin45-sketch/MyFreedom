@@ -199,8 +199,29 @@
         .btn-logout { background-color: #ffffff; color: #ff3b30; border: 1px solid #ff3b30; margin-top: 12px; width: 100%; }
         .btn-logout:hover { background-color: #fff2f2; }
 
-        .landing-mode { display: flex !important; }
+        .landing-mode { display: flex; }
         .authorized-mode { display: none; }
+
+        /* Онбординг — настройка финансовых целей */
+        .onboarding-container { max-width: 560px; margin: 48px auto; }
+        .onboarding-container h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; text-align: center; color: #1d1d1f; }
+        .onboarding-container .subtitle { font-size: 14px; color: #86868b; margin-bottom: 28px; text-align: center; }
+        .field-label { display: block; text-align: left; font-size: 13px; font-weight: 500; color: #515154; margin-bottom: 6px; }
+        .field-hint { font-size: 12px; color: #86868b; font-weight: 400; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .auth-form select {
+            width: 100%; height: 48px; padding: 0 14px;
+            background-color: #ffffff; border: 1px solid #d2d2d7; border-radius: 8px;
+            font-size: 15px; color: #1d1d1f; cursor: pointer;
+            transition: all 0.15s ease;
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+        .auth-form select:focus { outline: none; border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); }
+        .input-prefix { position: relative; }
+        .input-prefix > span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #86868b; font-size: 15px; pointer-events: none; }
+        .input-prefix input { padding-left: 30px !important; }
     </style>
 </head>
 <body>
@@ -322,6 +343,68 @@
         <button class="btn-submit btn-logout" onclick="logout()">Завершить сессию</button>
     </div>
 
+    <!-- ОНБОРДИНГ: настройка финансовых целей -->
+    <div class="card-container onboarding-container authorized-mode" id="onboardingScreen">
+        <h2>Настройка стратегии</h2>
+        <div class="subtitle">Зададим параметры, чтобы построить ваш трек к финансовой независимости.</div>
+        <form class="auth-form" id="onboardingForm">
+            <div class="form-row">
+                <div>
+                    <label class="field-label" for="obCurrency">Базовая валюта</label>
+                    <select id="obCurrency" required>
+                        <option value="RUB">₽ Рубль (RUB)</option>
+                        <option value="USD">$ Доллар (USD)</option>
+                        <option value="EUR">€ Евро (EUR)</option>
+                        <option value="GBP">£ Фунт (GBP)</option>
+                        <option value="CNY">¥ Юань (CNY)</option>
+                        <option value="JPY">¥ Иена (JPY)</option>
+                        <option value="CHF">₣ Франк (CHF)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label" for="obRisk">Риск-профиль</label>
+                    <select id="obRisk" required>
+                        <option value="conservative">Консервативный</option>
+                        <option value="moderate" selected>Умеренный</option>
+                        <option value="aggressive">Агрессивный</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="field-label" for="obInitial">Стартовый капитал</label>
+                <div class="input-wrapper input-prefix">
+                    <span id="obCurSym1">₽</span>
+                    <input type="number" id="obInitial" placeholder="0" min="0" step="any" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="field-label" for="obMonthly">Ежемесячное пополнение</label>
+                <div class="input-wrapper input-prefix">
+                    <span id="obCurSym2">₽</span>
+                    <input type="number" id="obMonthly" placeholder="0" min="0" step="any" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="field-label" for="obTarget">Целевой пассивный доход <span class="field-hint">(в месяц)</span></label>
+                <div class="input-wrapper input-prefix">
+                    <span id="obCurSym3">₽</span>
+                    <input type="number" id="obTarget" placeholder="0" min="1" step="any" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="field-label" for="obHorizon">Горизонт планирования <span class="field-hint">(лет)</span></label>
+                <input type="number" id="obHorizon" placeholder="например, 15" min="1" max="120" required>
+            </div>
+
+            <button type="submit" id="obSubmitBtn" class="btn-submit">Построить стратегию</button>
+        </form>
+        <div id="obError" class="message"></div>
+    </div>
+
     <script>
         const EYE_OPEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
         const EYE_CLOSED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
@@ -343,7 +426,7 @@
                     });
                     if (r.ok) {
                         const data = await r.json();
-                        loginSuccess(data.username, data.access_token, data.refresh_token, remember);
+                        loginSuccess(data.username, data.access_token, data.refresh_token, remember, data.is_onboarded);
                         return;
                     }
                 } catch (e) { /* сеть недоступна — покажем лендинг */ }
@@ -368,6 +451,7 @@
         function showLandingMode() {
             document.getElementById('landingWrapper').style.display = 'flex';
             document.getElementById('profileScreen').style.display = 'none';
+            document.getElementById('onboardingScreen').style.display = 'none';
             document.getElementById('startActionBlock').style.display = 'flex';
             document.getElementById('registerScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
@@ -465,14 +549,33 @@
             }
         }
 
-        function loginSuccess(username, accessToken, refreshToken, shouldRemember) {
+        function loginSuccess(username, accessToken, refreshToken, shouldRemember, isOnboarded) {
             const store = shouldRemember ? localStorage : sessionStorage;
             store.setItem('aeterna_token', accessToken);
             store.setItem('aeterna_user', username);
             store.setItem('aeterna_refresh', refreshToken);
             updateTimeGreeting(username);
             document.getElementById('landingWrapper').style.display = 'none';
+            // Не прошёл онбординг → ведём на настройку стратегии, иначе в кабинет
+            if (isOnboarded) {
+                showProfile();
+            } else {
+                showOnboarding();
+            }
+        }
+
+        function getAccessToken() {
+            return localStorage.getItem('aeterna_token') || sessionStorage.getItem('aeterna_token');
+        }
+
+        function showProfile() {
+            document.getElementById('onboardingScreen').style.display = 'none';
             document.getElementById('profileScreen').style.display = 'block';
+        }
+
+        function showOnboarding() {
+            document.getElementById('profileScreen').style.display = 'none';
+            document.getElementById('onboardingScreen').style.display = 'block';
         }
 
         function clearTokens() {
@@ -529,7 +632,7 @@
                 });
                 const result = await response.json();
                 if (response.ok) {
-                    loginSuccess(result.username, result.access_token, result.refresh_token, true);
+                    loginSuccess(result.username, result.access_token, result.refresh_token, true, result.is_onboarded);
                 } else {
                     errDiv.innerText = formatPydanticError(result.detail); errDiv.style.display = 'block';
                 }
@@ -571,12 +674,60 @@
                     errDiv.innerText = "Введите код из приложения-аутентификатора.";
                     errDiv.style.display = 'block';
                 } else if (response.ok) {
-                    loginSuccess(result.username, result.access_token, result.refresh_token, rememberMe);
+                    loginSuccess(result.username, result.access_token, result.refresh_token, rememberMe, result.is_onboarded);
                 } else {
                     errDiv.innerText = result.detail || "Неверные параметры доступа."; errDiv.style.display = 'block';
                 }
             } catch (k) {
                 errDiv.innerText = "Сервер Aeterna Core не отвечает."; errDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.innerText = originalText;
+            }
+        });
+
+        // ОНБОРДИНГ: символ валюты у денежных полей
+        const CURRENCY_SYMBOLS = { RUB: '₽', USD: '$', EUR: '€', GBP: '£', CNY: '¥', JPY: '¥', CHF: '₣' };
+        const obCurrency = document.getElementById('obCurrency');
+        function syncCurrencySymbol() {
+            const sym = CURRENCY_SYMBOLS[obCurrency.value] || '₽';
+            ['obCurSym1', 'obCurSym2', 'obCurSym3'].forEach(id => { document.getElementById(id).innerText = sym; });
+        }
+        obCurrency.addEventListener('change', syncCurrencySymbol);
+        syncCurrencySymbol();
+
+        // ОНБОРДИНГ: сохранение целей
+        document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('obSubmitBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true; btn.innerText = "Сохранение...";
+            const errDiv = document.getElementById('obError');
+            errDiv.style.display = 'none';
+
+            const payload = {
+                currency: obCurrency.value,
+                risk_profile: document.getElementById('obRisk').value,
+                initial_capital: parseFloat(document.getElementById('obInitial').value),
+                monthly_deposit: parseFloat(document.getElementById('obMonthly').value),
+                target_income: parseFloat(document.getElementById('obTarget').value),
+                years_horizon: parseInt(document.getElementById('obHorizon').value, 10)
+            };
+
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const response = await fetch(API_BASE + '/api/onboarding?token=' + token, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showProfile();
+                } else {
+                    errDiv.innerText = formatPydanticError(result.detail) || "Не удалось сохранить стратегию."; errDiv.style.display = 'block';
+                }
+            } catch (k) {
+                errDiv.innerText = "Не удалось связаться с сервером Aeterna."; errDiv.style.display = 'block';
             } finally {
                 btn.disabled = false; btn.innerText = originalText;
             }
