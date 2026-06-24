@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit, quotes
+from app import audit, metrics, quotes
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -33,9 +33,10 @@ async def get_portfolio(token: str):
             for r in cursor.fetchall()
         ]
 
-        # Подмешиваем живые котировки MOEX и считаем рыночную стоимость
+        # Подмешиваем живые котировки MOEX, считаем стоимость и изменение за день
         quote_map = quotes.get_quotes([p["ticker"] for p in positions])
         total_value = 0.0
+        day_change = 0.0
         has_quotes = False
         for p in positions:
             q = quote_map.get(p["ticker"])
@@ -45,6 +46,9 @@ async def get_portfolio(token: str):
                 p["currency"] = q["currency"]
                 p["value"] = round(q["price"] * p["quantity"], 2)
                 total_value += p["value"]
+                prev = q.get("prev_close")
+                if prev:
+                    day_change += (q["price"] - prev) * p["quantity"]
             else:
                 p["price"] = None
                 p["currency"] = None
@@ -71,12 +75,19 @@ async def get_portfolio(token: str):
             }
             for r in cursor.fetchall()
         ]
+        tv = round(total_value, 2) if has_quotes else None
+        m = metrics.compute_metrics(trades, tv)
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
             "trades": trades,
-            "total_value": round(total_value, 2) if has_quotes else None,
+            "total_value": tv,
+            "day_change": round(day_change, 2) if has_quotes else None,
             "value_currency": "RUB",
+            "invested": m["invested"],
+            "profit": m["profit"],
+            "profit_pct": m["profit_pct"],
+            "xirr": m["xirr"],
         }
     except HTTPException:
         raise

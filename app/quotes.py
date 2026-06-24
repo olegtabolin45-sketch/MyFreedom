@@ -18,7 +18,8 @@ from app import config
 from app.logging_config import logger
 
 _CACHE_TTL = 30 * 60  # 30 минут
-_cache: dict[str, tuple[float, str, float]] = {}  # ticker -> (price, currency, fetched_at)
+# ticker -> (price, prev_close, currency, fetched_at)
+_cache: dict[str, tuple[float, float | None, str, float]] = {}
 
 _SHARES_URL = (
     "https://iss.moex.com/iss/engines/stock/markets/shares/securities.json"
@@ -48,7 +49,7 @@ def _first_price(row: list, idxs: list[int]) -> float | None:
     return None
 
 
-def _fetch_shares(tickers: list[str]) -> dict[str, tuple[float, str]]:
+def _fetch_shares(tickers: list[str]) -> dict[str, tuple[float, float | None, str]]:
     url = _SHARES_URL + "&securities=" + urllib.parse.quote(",".join(tickers))
     data = _http_json(url)
     md = data.get("marketdata", {})
@@ -57,15 +58,17 @@ def _fetch_shares(tickers: list[str]) -> dict[str, tuple[float, str]]:
         cols.index(c) for c in ("LAST", "MARKETPRICE", "WAPRICE", "LCLOSEPRICE") if c in cols
     ]
     i_sec = cols.index("SECID")
-    out: dict[str, tuple[float, str]] = {}
+    i_close = cols.index("LCLOSEPRICE") if "LCLOSEPRICE" in cols else None
+    out: dict[str, tuple[float, float | None, str]] = {}
     for row in md.get("data", []):
         price = _first_price(row, price_idxs)
         if price is not None:
-            out.setdefault(row[i_sec], (price, "RUB"))
+            prev = _first_price(row, [i_close]) if i_close is not None else None
+            out.setdefault(row[i_sec], (price, prev, "RUB"))
     return out
 
 
-def _fetch_bonds(tickers: list[str]) -> dict[str, tuple[float, str]]:
+def _fetch_bonds(tickers: list[str]) -> dict[str, tuple[float, float | None, str]]:
     url = _BONDS_URL + "&securities=" + urllib.parse.quote(",".join(tickers))
     data = _http_json(url)
     # Номинал из секции securities
@@ -83,12 +86,15 @@ def _fetch_bonds(tickers: list[str]) -> dict[str, tuple[float, str]]:
     cols = md.get("columns", [])
     price_idxs = [cols.index(c) for c in ("LAST", "LCLOSEPRICE", "MARKETPRICE") if c in cols]
     i_sec = cols.index("SECID")
-    out: dict[str, tuple[float, str]] = {}
+    i_close = cols.index("LCLOSEPRICE") if "LCLOSEPRICE" in cols else None
+    out: dict[str, tuple[float, float | None, str]] = {}
     for row in md.get("data", []):
         secid = row[i_sec]
         pct = _first_price(row, price_idxs)
         if pct is not None and secid in face:
-            out.setdefault(secid, (round(face[secid] * pct / 100, 2), "RUB"))
+            prev_pct = _first_price(row, [i_close]) if i_close is not None else None
+            prev = round(face[secid] * prev_pct / 100, 2) if prev_pct is not None else None
+            out.setdefault(secid, (round(face[secid] * pct / 100, 2), prev, "RUB"))
     return out
 
 
@@ -102,15 +108,15 @@ def get_quotes(tickers: list[str]) -> dict[str, dict]:
     missing = []
     for t in tickers:
         cached = _cache.get(t)
-        if cached and now - cached[2] < _CACHE_TTL:
-            result[t] = {"price": cached[0], "currency": cached[1]}
+        if cached and now - cached[3] < _CACHE_TTL:
+            result[t] = {"price": cached[0], "prev_close": cached[1], "currency": cached[2]}
         else:
             missing.append(t)
 
     if not missing:
         return result
 
-    fetched: dict[str, tuple[float, str]] = {}
+    fetched: dict[str, tuple[float, float | None, str]] = {}
     try:
         fetched.update(_fetch_shares(missing))
         # Бумаги, не найденные среди акций/фондов, ищем на рынке облигаций
@@ -120,8 +126,8 @@ def get_quotes(tickers: list[str]) -> dict[str, dict]:
     except Exception as e:
         logger.warning("Не удалось получить котировки MOEX: %s", e)
 
-    for t, (price, currency) in fetched.items():
-        _cache[t] = (price, currency, now)
-        result[t] = {"price": price, "currency": currency}
+    for t, (price, prev, currency) in fetched.items():
+        _cache[t] = (price, prev, currency, now)
+        result[t] = {"price": price, "prev_close": prev, "currency": currency}
 
     return result
