@@ -1,4 +1,5 @@
 """Двухфакторная аутентификация: модуль TOTP и сценарий входа."""
+
 import pyotp
 
 from app import two_factor

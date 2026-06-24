@@ -3,6 +3,7 @@
 Запись в журнал не должна ломать основной поток: любые ошибки логируются,
 но не пробрасываются. IP и User-Agent извлекаются из запроса.
 """
+
 from fastapi import Request
 
 from app.db import get_db_connection

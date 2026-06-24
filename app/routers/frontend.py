@@ -1,4 +1,5 @@
 """Отдача статических файлов фронтенда с того же origin, что и API."""
+
 import os
 
 from fastapi import APIRouter

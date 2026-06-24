@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(gh auth *)",
-      "PowerShell(gh auth status 2>&1)",
-      "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\Git\\\\bin;C:\\\\Program Files\\\\GitHub CLI\"; Set-Location \"C:\\\\Users\\\\Olegt\\\\Desktop\\\\Project\\(MyFreedom\\)\"; git init; git add .; git commit -m \"Initial commit: Aeterna Analytics project\")"
-    ]
-  }
-}

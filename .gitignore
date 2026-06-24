@@ -12,6 +12,9 @@ env/
 # IDE
 .idea/
 
+# Локальные настройки Claude Code
+.claude/
+
 # OS
 Thumbs.db
 .DS_Store

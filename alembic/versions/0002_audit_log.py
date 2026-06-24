@@ -5,6 +5,7 @@ Revises: 0001
 Create Date: 2026-06-24
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -21,7 +22,12 @@ def upgrade() -> None:
     op.create_table(
         "audit_log",
         sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("action", sa.String(length=50), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=True),
         sa.Column("ip", sa.String(length=45), nullable=True),

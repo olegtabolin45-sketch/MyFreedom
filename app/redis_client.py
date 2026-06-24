@@ -1,4 +1,5 @@
 """Ленивое подключение к Redis (refresh-токены и blacklist access-токенов)."""
+
 import redis
 
 from app import config

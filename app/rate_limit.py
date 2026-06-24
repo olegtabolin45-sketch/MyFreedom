@@ -3,8 +3,9 @@
 Примечание: лимитер хранит состояние в памяти процесса. Для нескольких
 инстансов нужен общий бэкенд (Redis) — см. ROADMAP, этап 2.
 """
-import time
+
 import threading
+import time
 from collections import defaultdict
 
 from fastapi import HTTPException, Request, status

@@ -1,10 +1,10 @@
 """Окружение Alembic. URL к БД берётся из app.config (переменные окружения)."""
+
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
 from app import config as app_config
 
 # Конфиг из alembic.ini (для логирования)

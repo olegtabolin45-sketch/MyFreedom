@@ -7,6 +7,7 @@ CSP подобран под текущий фронтенд (inline <style>/<scr
 'unsafe-inline' для script-src — временно: при переезде фронта на фреймворк
 (этап 7) заменим на nonce/hash и уберём inline-скрипты.
 """
+
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # Content-Security-Policy одной строкой

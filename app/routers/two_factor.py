@@ -1,5 +1,6 @@
 """Управление двухфакторной аутентификацией (TOTP)."""
-from fastapi import APIRouter, HTTPException, Request, status
+
+from fastapi import APIRouter, HTTPException, Request
 
 from app import audit, two_factor
 from app.db import get_db_connection
@@ -43,7 +44,7 @@ async def setup_2fa(token: str):
         raise
     except Exception as e:
         logger.error("Ошибка настройки 2FA: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Ошибка настройки 2FA.")
+        raise HTTPException(status_code=500, detail="Ошибка настройки 2FA.") from e
     finally:
         if conn is not None:
             conn.close()
@@ -82,7 +83,7 @@ async def enable_2fa(data: TwoFactorCodeRequest, token: str, request: Request):
         raise
     except Exception as e:
         logger.error("Ошибка включения 2FA: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Ошибка включения 2FA.")
+        raise HTTPException(status_code=500, detail="Ошибка включения 2FA.") from e
     finally:
         if conn is not None:
             conn.close()
@@ -119,7 +120,7 @@ async def disable_2fa(data: TwoFactorCodeRequest, token: str, request: Request):
         raise
     except Exception as e:
         logger.error("Ошибка отключения 2FA: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Ошибка отключения 2FA.")
+        raise HTTPException(status_code=500, detail="Ошибка отключения 2FA.") from e
     finally:
         if conn is not None:
             conn.close()
