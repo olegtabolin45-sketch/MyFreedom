@@ -46,7 +46,7 @@
 - [x] Заголовки безопасности (HSTS, CSP, X-Frame-Options) через middleware. ✅ `app/middleware.py` (`SecurityHeadersMiddleware`): CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy на все ответы.
 - [ ] Защита от CSRF
 - [ ] Аудит-лог действий пользователя
-- [ ] Валидация и санитизация **всех** входных данных
+- [x] Валидация и санитизация **всех** входных данных. ✅ `app/schemas.py`: `extra="forbid"` (запрет лишних полей), обрезка пробелов, лимиты длин, паттерн username, лимит пароля 72 байта (под bcrypt), whitelist валют и риск-профилей, верхние границы числовых полей онбординга.
 
 ## 🛡️ Этап 3 — Защита от DDoS и нагрузки
 
