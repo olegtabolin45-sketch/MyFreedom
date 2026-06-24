@@ -15,6 +15,9 @@ LOGIN_FAILED = "login_failed"
 TOKEN_REFRESH = "token_refresh"
 LOGOUT = "logout"
 ONBOARDING = "onboarding"
+TWO_FA_ENABLED = "2fa_enabled"
+TWO_FA_DISABLED = "2fa_disabled"
+LOGIN_2FA_FAILED = "login_2fa_failed"
 
 
 def _client_ip(request: Request) -> str:

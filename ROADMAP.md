@@ -42,7 +42,7 @@
 - [x] Хранение refresh-токенов и blacklist в **Redis**. ✅ `app/redis_client.py`; refresh в `refresh:<token>` (TTL 30 дней), blacklist access по `jti` в `bl:<jti>`. Контейнер `aeterna-redis` (appendonly).
 - [ ] Подтверждение email при регистрации
 - [ ] Сброс пароля по email
-- [ ] Двухфакторная аутентификация (2FA / TOTP)
+- [x] Двухфакторная аутентификация (2FA / TOTP). ✅ `app/two_factor.py` (pyotp + QR), миграция `0003` (поля `totp_secret`, `is_2fa_enabled`), роутер `/api/2fa/setup|enable|disable`, проверка кода в login. Фронт: поле кода при `requires_2fa`. (UI включения 2FA с QR в личном кабинете — отдельная задача.)
 - [x] Заголовки безопасности (HSTS, CSP, X-Frame-Options) через middleware. ✅ `app/middleware.py` (`SecurityHeadersMiddleware`): CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy на все ответы.
 - [ ] Защита от CSRF
 - [x] Аудит-лог действий пользователя. ✅ Таблица `audit_log` (миграция `0002`), модуль `app/audit.py`; пишутся register, login_success/failed, token_refresh, logout, onboarding с IP и User-Agent.

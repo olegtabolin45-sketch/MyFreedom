@@ -9,3 +9,5 @@ python-dotenv
 alembic
 sqlalchemy
 redis
+pyotp
+qrcode[pil]
