@@ -61,6 +61,12 @@ class LoginRequest(_StrictModel):
     email: EmailStr = Field(..., max_length=255)
     # Лимит длины — защита от гигантских payload'ов; правила сложности тут не нужны
     password: str = Field(..., min_length=1, max_length=128)
+    # Код 2FA (если у пользователя включена двухфакторная аутентификация)
+    totp_code: str | None = Field(default=None, min_length=6, max_length=10)
+
+
+class TwoFactorCodeRequest(_StrictModel):
+    code: str = Field(..., min_length=6, max_length=10)
 
 
 class RefreshRequest(_StrictModel):

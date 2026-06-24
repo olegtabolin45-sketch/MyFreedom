@@ -2,7 +2,7 @@
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request, status
 
-from app import audit
+from app import audit, two_factor
 from app.db import get_db_connection
 from app.logging_config import logger
 from app.rate_limit import check_rate_limit
@@ -96,7 +96,8 @@ async def login_user(data: LoginRequest, request: Request):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT username, password_hash, is_onboarded FROM users WHERE email = %s",
+            "SELECT username, password_hash, is_onboarded, is_2fa_enabled, totp_secret "
+            "FROM users WHERE email = %s",
             (normalized_email,),
         )
         user = cursor.fetchone()
@@ -111,6 +112,7 @@ async def login_user(data: LoginRequest, request: Request):
             )
 
         username, db_hashed_password, is_onboarded = user[0], user[1], user[2]
+        is_2fa_enabled, totp_secret = user[3], user[4]
 
         if not verify_password(data.password, db_hashed_password):
             audit.record_event(request, audit.LOGIN_FAILED, email=normalized_email)
@@ -118,6 +120,18 @@ async def login_user(data: LoginRequest, request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Неверный адрес электронной почты или пароль.",
             )
+
+        # Второй фактор: пароль верен, но нужен корректный TOTP-код
+        if is_2fa_enabled:
+            if not data.totp_code:
+                # Пароль принят — фронт должен запросить код 2FA
+                return {"status": "2fa_required", "requires_2fa": True}
+            if not two_factor.verify_code(totp_secret, data.totp_code):
+                audit.record_event(request, audit.LOGIN_2FA_FAILED, email=normalized_email)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Неверный код двухфакторной аутентификации.",
+                )
 
         audit.record_event(request, audit.LOGIN_SUCCESS, email=normalized_email)
         return _token_payload(username, normalized_email, is_onboarded=bool(is_onboarded))
