@@ -6,3 +6,5 @@ trino
 pg8000
 pydantic[email]
 python-dotenv
+alembic
+sqlalchemy
