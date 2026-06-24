@@ -2,6 +2,7 @@
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request, status
 
+from app import audit
 from app.db import get_db_connection
 from app.logging_config import logger
 from app.rate_limit import check_rate_limit
@@ -68,6 +69,7 @@ async def register_user(data: RegisterRequest, request: Request):
         )
         conn.commit()
 
+        audit.record_event(request, audit.REGISTER, email=normalized_email)
         return _token_payload(data.username, normalized_email, is_onboarded=False)
 
     except HTTPException as he:
@@ -102,6 +104,7 @@ async def login_user(data: LoginRequest, request: Request):
         if not user:
             fake_salt = b"$2b$12$L7RMD8clNRE1bepshLrrUu"
             bcrypt.hashpw(data.password.encode("utf-8"), fake_salt)
+            audit.record_event(request, audit.LOGIN_FAILED, email=normalized_email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Неверный адрес электронной почты или пароль.",
@@ -110,11 +113,13 @@ async def login_user(data: LoginRequest, request: Request):
         username, db_hashed_password, is_onboarded = user[0], user[1], user[2]
 
         if not verify_password(data.password, db_hashed_password):
+            audit.record_event(request, audit.LOGIN_FAILED, email=normalized_email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Неверный адрес электронной почты или пароль.",
             )
 
+        audit.record_event(request, audit.LOGIN_SUCCESS, email=normalized_email)
         return _token_payload(username, normalized_email, is_onboarded=bool(is_onboarded))
 
     except HTTPException as he:
@@ -150,6 +155,7 @@ async def refresh_tokens(data: RefreshRequest, request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Пользователь не найден.",
             )
+        audit.record_event(request, audit.TOKEN_REFRESH, email=email)
         return _token_payload(user[0], email, is_onboarded=bool(user[1]))
     except HTTPException as he:
         raise he
@@ -165,9 +171,10 @@ async def refresh_tokens(data: RefreshRequest, request: Request):
 
 
 @router.post("/logout")
-async def logout(data: LogoutRequest):
+async def logout(data: LogoutRequest, request: Request):
     """Отзывает refresh-токен и (если передан) заносит access-токен в blacklist."""
     revoke_refresh_token(data.refresh_token)
     if data.access_token:
         blacklist_access_token(data.access_token)
+    audit.record_event(request, audit.LOGOUT)
     return {"status": "success", "message": "Сессия завершена."}

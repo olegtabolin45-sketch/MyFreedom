@@ -1,6 +1,7 @@
 """Эндпоинты статуса пользователя и онбординга."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from app import audit
 from app.db import get_db_connection
 from app.logging_config import logger
 from app.schemas import OnboardingRequest
@@ -39,7 +40,7 @@ async def get_user_status(token: str):
 
 
 @router.post("/onboarding")
-async def save_onboarding(data: OnboardingRequest, token: str):
+async def save_onboarding(data: OnboardingRequest, token: str, request: Request):
     email = decode_access_token(token)
 
     conn = None
@@ -69,6 +70,7 @@ async def save_onboarding(data: OnboardingRequest, token: str):
         cursor.execute("UPDATE users SET is_onboarded = true WHERE email = %s", (email,))
 
         conn.commit()
+        audit.record_event(request, audit.ONBOARDING, email=email)
         return {"status": "success", "message": "Данные онбординга успешно сохранены."}
 
     except HTTPException as he:
