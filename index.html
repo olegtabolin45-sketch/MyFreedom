@@ -415,6 +415,23 @@
         .pf-reupload { margin-top: 16px; font-size: 13px; color: #86868b; }
         .pf-reupload a { color: #1d1d1f; font-weight: 500; cursor: pointer; text-decoration: underline; }
 
+        /* Диаграмма распределения портфеля */
+        .alloc-card { margin-bottom: 16px; }
+        .alloc-body { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: center; }
+        .alloc-chart { position: relative; display: flex; align-items: center; justify-content: center; }
+        .alloc-chart svg { width: 200px; height: 200px; transform: rotate(-90deg); }
+        .alloc-seg { transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .alloc-center { position: absolute; text-align: center; }
+        .alloc-center .v { font-size: 22px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .alloc-center .c { font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .alloc-legend { display: flex; flex-direction: column; gap: 10px; }
+        .alloc-item { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .alloc-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+        .alloc-name { color: #1d1d1f; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .alloc-pct { color: #1d1d1f; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .alloc-val { color: #86868b; font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
+        @media (max-width: 700px) { .alloc-body { grid-template-columns: 1fr; justify-items: center; } }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -619,6 +636,17 @@
 
             <!-- Данные портфеля (после загрузки) -->
             <div id="pfData" style="display: none;">
+                <div class="dash-card alloc-card">
+                    <div class="dash-card-title">Распределение портфеля</div>
+                    <div class="dash-card-hint">Доли активов и свободных средств в текущей стоимости</div>
+                    <div class="alloc-body">
+                        <div class="alloc-chart">
+                            <svg id="allocChart" viewBox="0 0 120 120"></svg>
+                            <div class="alloc-center"><div class="v" id="allocTotal">—</div><div class="c">всего</div></div>
+                        </div>
+                        <div class="alloc-legend" id="allocLegend"></div>
+                    </div>
+                </div>
                 <div class="pf-section-title">Активы в портфеле</div>
                 <div class="pf-table-wrap">
                     <table class="pf-table">
@@ -1637,6 +1665,56 @@
                     `<td class="num">${num2.format(t.amount || 0)} ${t.currency || ''}</td>` +
                     `<td class="num">${num2.format(t.commission || 0)}</td></tr>`;
             }).join('') || '<tr><td colspan="7">Сделок нет</td></tr>';
+
+            renderAllocation(data, denom, curSym);
+        }
+
+        // Палитра сегментов диаграммы распределения
+        const ALLOC_COLORS = ['#5b6ef5', '#24b24b', '#ff9f0a', '#2b6fd6', '#8a4fe0', '#ff5a4d',
+                              '#00b3a4', '#e0508a', '#7a8b99', '#c9a227', '#3aa0ff', '#9b59b6'];
+
+        function renderAllocation(data, denom, curSym) {
+            const svg = document.getElementById('allocChart');
+            const legend = document.getElementById('allocLegend');
+            // Собираем доли: бумаги с ценой + свободные средства
+            const items = [];
+            (data.positions || []).forEach(p => { if (p.value) items.push({ name: p.name || p.ticker, value: p.value }); });
+            (data.cash || []).forEach(c => { if (c.value) items.push({ name: 'Свободные средства (' + c.currency + ')', value: c.value }); });
+            items.sort((a, b) => b.value - a.value);
+            const total = items.reduce((s, i) => s + i.value, 0);
+
+            if (!total) {
+                svg.innerHTML = '';
+                legend.innerHTML = '<div class="alloc-item"><span class="alloc-name">Нет данных с ценами для диаграммы</span></div>';
+                document.getElementById('allocTotal').innerText = '—';
+                return;
+            }
+
+            document.getElementById('allocTotal').innerText = nfmt.format(Math.round(total / 1000)) + 'k ' + curSym;
+
+            // Кольцо: r=42, окружность ~263.9; сегменты через stroke-dasharray
+            const r = 42, C = 2 * Math.PI * r;
+            let offset = 0;
+            let segs = '';
+            items.forEach((it, i) => {
+                const frac = it.value / total;
+                const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                const len = frac * C;
+                segs += `<circle class="alloc-seg" cx="60" cy="60" r="${r}" fill="none" stroke="${color}" ` +
+                    `stroke-width="16" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" ` +
+                    `stroke-dashoffset="${(-offset).toFixed(2)}"/>`;
+                offset += len;
+            });
+            svg.innerHTML = segs;
+
+            legend.innerHTML = items.map((it, i) => {
+                const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                const pct = (it.value / total * 100).toFixed(1);
+                return `<div class="alloc-item"><span class="alloc-dot" style="background:${color}"></span>` +
+                    `<span class="alloc-name">${it.name}</span>` +
+                    `<span class="alloc-pct">${pct}%</span>` +
+                    `<span class="alloc-val">${nfmt.format(Math.round(it.value))} ${curSym}</span></div>`;
+            }).join('');
         }
 
         async function uploadReport(fileObj) {
