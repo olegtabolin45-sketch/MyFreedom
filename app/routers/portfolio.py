@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit, quotes
+from app import audit, metrics, quotes
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -33,9 +33,10 @@ async def get_portfolio(token: str):
             for r in cursor.fetchall()
         ]
 
-        # Подмешиваем живые котировки MOEX и считаем рыночную стоимость
+        # Подмешиваем живые котировки MOEX, считаем стоимость и изменение за день
         quote_map = quotes.get_quotes([p["ticker"] for p in positions])
         total_value = 0.0
+        day_change = 0.0
         has_quotes = False
         for p in positions:
             q = quote_map.get(p["ticker"])
@@ -45,6 +46,9 @@ async def get_portfolio(token: str):
                 p["currency"] = q["currency"]
                 p["value"] = round(q["price"] * p["quantity"], 2)
                 total_value += p["value"]
+                prev = q.get("prev_close")
+                if prev:
+                    day_change += (q["price"] - prev) * p["quantity"]
             else:
                 p["price"] = None
                 p["currency"] = None
@@ -52,7 +56,7 @@ async def get_portfolio(token: str):
 
         cursor.execute(
             "SELECT trade_date, trade_time, side, name, ticker, price, currency, "
-            "quantity, amount, commission FROM portfolio_trades "
+            "quantity, amount, commission, is_fx FROM portfolio_trades "
             "WHERE email = %s ORDER BY id",
             (email,),
         )
@@ -68,15 +72,55 @@ async def get_portfolio(token: str):
                 "quantity": r[7],
                 "amount": r[8],
                 "commission": r[9],
+                "is_fx": bool(r[10]),
             }
             for r in cursor.fetchall()
         ]
+        cursor.execute(
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
+            (email,),
+        )
+        cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
+
+        # Денежные остатки → рубли по курсу ЦБ
+        cursor.execute(
+            "SELECT currency, amount FROM portfolio_cash WHERE email = %s",
+            (email,),
+        )
+        cash_rows = cursor.fetchall()
+        fx = quotes.get_fx_rates() if cash_rows else {}
+        cash = []
+        cash_value = 0.0
+        for currency, amount in cash_rows:
+            rate = fx.get(currency, 1.0 if currency == "RUB" else None)
+            value_rub = round(amount * rate, 2) if rate else None
+            if value_rub:
+                cash_value += value_rub
+            cash.append({"currency": currency, "amount": amount, "value": value_rub})
+
+        # Прибыль/доходность считаем по бумагам; кэш показываем отдельно
+        tv = round(total_value, 2) if has_quotes else None
+        m = metrics.compute_metrics(trades, tv, cashflows)
+
+        # Итоговая стоимость портфеля = бумаги + свободные средства
+        portfolio_total = None
+        if has_quotes or cash_value:
+            portfolio_total = round(total_value + cash_value, 2)
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
             "trades": trades,
-            "total_value": round(total_value, 2) if has_quotes else None,
+            "total_value": tv,
+            "cash": cash,
+            "cash_value": round(cash_value, 2) if cash else None,
+            "portfolio_total": portfolio_total,
+            "day_change": round(day_change, 2) if has_quotes else None,
             "value_currency": "RUB",
+            "invested": m["invested"],
+            "profit": m["profit"],
+            "profit_pct": m["profit_pct"],
+            "xirr": m["xirr"],
+            "dividends": m["dividends"],
         }
     except HTTPException:
         raise
@@ -111,6 +155,8 @@ async def import_report(token: str, request: Request, file: UploadFile):
 
     positions = parsed["positions"]
     trades = parsed["trades"]
+    cashflows = parsed.get("cashflows", [])
+    report_date = parsed.get("report_date", "")
     if not positions and not trades:
         raise HTTPException(status_code=400, detail="В отчёте не найдено позиций или сделок.")
 
@@ -118,22 +164,26 @@ async def import_report(token: str, request: Request, file: UploadFile):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Текущий отчёт замещает предыдущие данные пользователя
-        cursor.execute("DELETE FROM portfolio_positions WHERE email = %s", (email,))
-        cursor.execute("DELETE FROM portfolio_trades WHERE email = %s", (email,))
 
-        for p in positions:
-            cursor.execute(
-                "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
-            )
+        # --- Сделки: накапливаем из всех отчётов, дедуп по ключу ---
+        cursor.execute(
+            "SELECT trade_date, trade_time, ticker, side, quantity, amount "
+            "FROM portfolio_trades WHERE email = %s",
+            (email,),
+        )
+        existing_trades = {tuple(r) for r in cursor.fetchall()}
+        new_trades = 0
         for t in trades:
+            key = (t["date"], t["time"], t["ticker"], t["side"], t["quantity"], t["amount"])
+            if key in existing_trades:
+                continue
+            existing_trades.add(key)
+            new_trades += 1
             cursor.execute(
                 "INSERT INTO portfolio_trades "
                 "(email, trade_date, trade_time, side, ticker, name, price, currency, "
-                "quantity, amount, commission) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "quantity, amount, commission, is_fx) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     email,
                     t["date"],
@@ -146,21 +196,68 @@ async def import_report(token: str, request: Request, file: UploadFile):
                     t["quantity"],
                     t["amount"],
                     t["commission"],
+                    bool(t.get("is_fx")),
                 ),
             )
+
+        # --- Денежные потоки (дивиденды/налоги): накапливаем, дедуп ---
+        cursor.execute(
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
+            (email,),
+        )
+        existing_cf = {tuple(r) for r in cursor.fetchall()}
+        for cf in cashflows:
+            key = (cf["date"], cf["kind"], cf["amount"])
+            if key in existing_cf:
+                continue
+            existing_cf.add(key)
+            cursor.execute(
+                "INSERT INTO portfolio_cashflows (email, flow_date, kind, amount) "
+                "VALUES (%s, %s, %s, %s)",
+                (email, cf["date"], cf["kind"], cf["amount"]),
+            )
+
+        # --- Позиции: берём из самого свежего отчёта ---
+        cursor.execute("SELECT positions_asof FROM portfolio_meta WHERE email = %s", (email,))
+        meta = cursor.fetchone()
+        prev_asof = meta[0] if meta else None
+        if positions and (prev_asof is None or report_date >= prev_asof):
+            cursor.execute("DELETE FROM portfolio_positions WHERE email = %s", (email,))
+            for p in positions:
+                cursor.execute(
+                    "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
+                )
+            # Денежные остатки тоже из самого свежего отчёта
+            cursor.execute("DELETE FROM portfolio_cash WHERE email = %s", (email,))
+            for currency, amount in parsed.get("cash", {}).items():
+                cursor.execute(
+                    "INSERT INTO portfolio_cash (email, currency, amount) VALUES (%s, %s, %s)",
+                    (email, currency, amount),
+                )
+            if meta:
+                cursor.execute(
+                    "UPDATE portfolio_meta SET positions_asof = %s WHERE email = %s",
+                    (report_date, email),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO portfolio_meta (email, positions_asof) VALUES (%s, %s)",
+                    (email, report_date),
+                )
+
         conn.commit()
         audit.record_event(
             request,
             audit.PORTFOLIO_IMPORT,
             email=email,
-            detail=f"positions={len(positions)} trades={len(trades)}",
+            detail=f"new_trades={new_trades} report_date={report_date}",
         )
         return {
             "status": "success",
-            "positions_count": len(positions),
-            "trades_count": len(trades),
-            "positions": positions,
-            "trades": trades,
+            "new_trades": new_trades,
+            "report_date": report_date,
         }
     except Exception as e:
         logger.error("Ошибка сохранения портфеля: %s", e, exc_info=True)

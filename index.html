@@ -211,7 +211,7 @@
         .ob-progress-step { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #86868b; }
         .ob-progress-pct { font-size: 12px; font-weight: 500; color: #1d1d1f; }
         .ob-progress-track { height: 4px; width: 100%; background: #e5e5ea; border-radius: 2px; overflow: hidden; }
-        .ob-progress-fill { height: 100%; width: 0%; background: #1d1d1f; border-radius: 2px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .ob-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #5b6ef5, #2b6fd6); border-radius: 2px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 
         /* Сцена с вопросами */
         .ob-stage { position: relative; min-height: 184px; transition: min-height 0.42s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -281,8 +281,10 @@
         .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
         .dash-profile { display: flex; align-items: center; gap: 16px; }
         .dash-avatar {
-            width: 56px; height: 56px; border-radius: 16px; background: #1d1d1f; color: #fff;
+            width: 56px; height: 56px; border-radius: 16px;
+            background: linear-gradient(135deg, #5b6ef5 0%, #8a4fe0 100%); color: #fff;
             display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
+            box-shadow: 0 6px 16px rgba(91, 110, 245, 0.28);
         }
         .dash-hello { font-size: 22px; font-weight: 700; color: #1d1d1f; line-height: 1.2; }
         .dash-sub { font-size: 14px; color: #86868b; margin-top: 2px; }
@@ -295,8 +297,13 @@
 
         /* KPI-карточки */
         .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
-        .kpi-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 18px 20px; transition: all 0.25s ease; }
-        .kpi-card:hover { border-color: #1d1d1f; box-shadow: 0 8px 24px rgba(0,0,0,0.04); transform: translateY(-2px); }
+        .kpi-card { background: #fff; border: 1px solid #e5e5ea; border-top: 3px solid #d2d2d7; border-radius: 14px; padding: 18px 20px; transition: all 0.25s ease; }
+        .kpi-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.06); transform: translateY(-2px); }
+        /* Акцентные цвета карточек, чтобы оживить интерфейс */
+        .kpi-grid .kpi-card:nth-child(1) { border-top-color: #5b6ef5; }
+        .kpi-grid .kpi-card:nth-child(2) { border-top-color: #24b24b; }
+        .kpi-grid .kpi-card:nth-child(3) { border-top-color: #ff9f0a; }
+        .kpi-grid .kpi-card:nth-child(4) { border-top-color: #2b6fd6; }
         .kpi-label { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #86868b; margin-bottom: 10px; }
         .kpi-value { font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
         .kpi-unit { font-size: 14px; color: #86868b; font-weight: 500; margin-left: 3px; }
@@ -337,13 +344,18 @@
             margin-bottom: -1px; transition: all 0.2s ease;
         }
         .dash-tab:hover { color: #1d1d1f; }
-        .dash-tab.active { color: #1d1d1f; border-bottom-color: #1d1d1f; font-weight: 600; }
+        .dash-tab.active { color: #1d1d1f; border-bottom-color: #5b6ef5; font-weight: 600; }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; animation: dashIn 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
 
         /* Метрики портфеля (вкладка «Общее») */
         .pf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
-        .pf-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 22px 24px; }
+        .pf-card { background: #fff; border: 1px solid #e5e5ea; border-top: 3px solid #d2d2d7; border-radius: 16px; padding: 22px 24px; transition: all 0.25s ease; }
+        .pf-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.05); transform: translateY(-2px); }
+        .pf-grid .pf-card:nth-child(1) { border-top-color: #5b6ef5; }
+        .pf-grid .pf-card:nth-child(2) { border-top-color: #24b24b; }
+        .pf-grid .pf-card:nth-child(3) { border-top-color: #ff9f0a; }
+        .pf-grid .pf-card:nth-child(4) { border-top-color: #8a4fe0; }
         .pf-head { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
         .pf-label { font-size: 13px; font-weight: 600; color: #515154; }
         .pf-info {
@@ -395,6 +407,9 @@
         .pf-table tr:hover td { background: #fafafa; }
         .pf-table .num { text-align: right; font-variant-numeric: tabular-nums; }
         .pf-ticker { display: inline-block; padding: 2px 7px; background: #f0f0f2; border-radius: 5px; font-size: 12px; font-weight: 600; color: #515154; }
+        .pf-asset { display: flex; align-items: center; gap: 10px; }
+        .pf-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; object-fit: cover; background: #f0f0f2; }
+        .pf-icon-fallback { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: #1d1d1f; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
         .pf-side-buy { color: #24b24b; font-weight: 600; }
         .pf-side-sell { color: #ff3b30; font-weight: 600; }
         .pf-reupload { margin-top: 16px; font-size: 13px; color: #86868b; }
@@ -576,8 +591,8 @@
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
-                        <span class="pf-label">Доходность (XIRR)</span>
-                        <span class="pf-info" title="Среднегодовая доходность портфеля по формуле «Доходность портфеля с переменной суммой инвестиций» (XIRR). Учитываются все движения по бумагам — покупки, продажи, дивиденды, налог с дивидендов, комиссии.">i</span>
+                        <span class="pf-label">Доходность (годовая)</span>
+                        <span class="pf-info" title="Среднегодовая доходность (CAGR) на вложенный капитал за период владения: учитывает текущую стоимость, дивиденды и налоги. Для точности загрузите отчёты за весь период.">i</span>
                     </div>
                     <div class="pf-value muted" id="pfXirr">— %</div>
                     <div class="pf-sub">Среднегодовая</div>
@@ -600,7 +615,7 @@
                 <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
                 <div class="upload-status" id="uploadStatus" style="display: none;"></div>
             </div>
-            <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Подключение брокеров по API и иностранные котировки — на следующих этапах. Цены обновляются раз в 30 минут во время работы биржи; суммы — после вычета налога 13%.</div>
+            <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Прибыль и доходность (XIRR) считаются по сделкам из загруженного отчёта — для точности загрузите отчёты за весь период владения. Цены обновляются раз в 30 минут во время работы биржи; иностранные котировки и подключение брокеров по API — на следующих этапах.</div>
 
             <!-- Данные портфеля (после загрузки) -->
             <div id="pfData" style="display: none;">
@@ -1510,39 +1525,107 @@
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const r = await fetch(API_BASE + '/api/portfolio?token=' + token);
-                if (!r.ok) return;
+                if (!r.ok) { renderPortfolio(null); return; }
                 const data = await r.json();
                 renderPortfolio(data);
-            } catch (e) { /* портфель пуст / сеть */ }
+            } catch (e) { renderPortfolio(null); }
+        }
+
+        function resetPortfolioMetrics() {
+            const set = (id, txt) => { const e = document.getElementById(id); if (e) { e.innerText = txt; e.classList.add('muted'); e.classList.remove('pf-pos', 'pf-neg'); } };
+            set('pfValue', '— ₽'); set('pfProfit', '— ₽'); set('pfXirr', '— %'); set('pfIncome', '— ₽');
+            document.getElementById('pfInvested').innerText = 'Вложено: —';
+            document.getElementById('pfProfitDay').innerText = 'За день: —';
+            document.getElementById('pfIncomeYield').innerText = '— % к стоимости активов';
+            document.getElementById('pfPositionsBody').innerHTML = '';
+            document.getElementById('pfTradesBody').innerHTML = '';
+            document.getElementById('pfData').style.display = 'none';
         }
 
         function renderPortfolio(data) {
             const hasData = data && data.has_data;
-            document.getElementById('pfData').style.display = hasData ? 'block' : 'none';
-            if (!hasData) return;
+            if (!hasData) { resetPortfolioMetrics(); return; }
+            document.getElementById('pfData').style.display = 'block';
 
             const total = data.total_value || 0;
             const cur = data.value_currency || '₽';
             const curSym = CURRENCY_SYMBOLS[cur] || cur;
+            // Стоимость портфеля = бумаги + свободные средства
+            const headline = data.portfolio_total != null ? data.portfolio_total : data.total_value;
 
             // Метрика «Текущая стоимость портфеля»
             const pfVal = document.getElementById('pfValue');
-            if (data.total_value != null) {
+            if (headline != null) {
                 pfVal.classList.remove('muted');
-                pfVal.innerText = `${nfmt.format(Math.round(total))} ${curSym}`;
+                pfVal.innerText = `${nfmt.format(Math.round(headline))} ${curSym}`;
             } else {
                 pfVal.classList.add('muted');
                 pfVal.innerText = `— ${curSym}`;
             }
+            // Подпись: вложено + свободные средства
+            let sub = data.invested != null ? `Вложено: ${nfmt.format(Math.round(data.invested))} ${curSym}` : 'Вложено: —';
+            if (data.cash_value) sub += `  ·  Свободно: ${nfmt.format(Math.round(data.cash_value))} ${curSym}`;
+            document.getElementById('pfInvested').innerText = sub;
 
-            document.getElementById('pfPositionsBody').innerHTML = (data.positions || []).map(p => {
+            // Прибыль + изменение за день (с цветом)
+            const pfProfit = document.getElementById('pfProfit');
+            if (data.profit != null) {
+                const sign = data.profit >= 0 ? '+' : '−';
+                pfProfit.classList.remove('muted');
+                pfProfit.classList.toggle('pf-pos', data.profit >= 0);
+                pfProfit.classList.toggle('pf-neg', data.profit < 0);
+                pfProfit.innerText = `${sign}${nfmt.format(Math.abs(Math.round(data.profit)))} ${curSym}`;
+                if (data.profit_pct != null) pfProfit.innerText += `  (${data.profit_pct >= 0 ? '+' : ''}${data.profit_pct}%)`;
+            } else {
+                pfProfit.classList.add('muted'); pfProfit.classList.remove('pf-pos', 'pf-neg');
+                pfProfit.innerText = `— ${curSym}`;
+            }
+            const pfDay = document.getElementById('pfProfitDay');
+            if (data.day_change != null) {
+                const up = data.day_change >= 0;
+                pfDay.innerHTML = `За день: <span class="${up ? 'pf-pos' : 'pf-neg'}">${up ? '+' : '−'}${nfmt.format(Math.abs(Math.round(data.day_change)))} ${curSym}</span>`;
+            } else {
+                pfDay.innerText = 'За день: —';
+            }
+
+            // Доходность XIRR (с цветом)
+            const pfXirr = document.getElementById('pfXirr');
+            if (data.xirr != null) {
+                pfXirr.classList.remove('muted');
+                pfXirr.classList.toggle('pf-pos', data.xirr >= 0);
+                pfXirr.classList.toggle('pf-neg', data.xirr < 0);
+                pfXirr.innerText = `${data.xirr >= 0 ? '+' : ''}${data.xirr} %`;
+            } else {
+                pfXirr.classList.add('muted'); pfXirr.classList.remove('pf-pos', 'pf-neg');
+                pfXirr.innerText = '— %';
+            }
+
+            const denom = headline || total || 0;
+            let rows = (data.positions || []).map(p => {
                 const price = p.price != null ? num2.format(p.price) + ' ' + curSym : '—';
                 const value = p.value != null ? nfmt.format(Math.round(p.value)) + ' ' + curSym : '—';
-                const share = (p.value != null && total > 0) ? (p.value / total * 100).toFixed(1) + '%' : '—';
-                return `<tr><td>${p.name || '—'}</td><td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
+                const share = (p.value != null && denom > 0) ? (p.value / denom * 100).toFixed(1) + '%' : '—';
+                const letter = (p.name || p.ticker || '?').trim().charAt(0).toUpperCase();
+                // Иконка бренда по ISIN (CDN Т-Банка); при отсутствии — буква-заглушка
+                const icon = p.isin
+                    ? `<img class="pf-icon" src="https://invest-brands.cdn-tinkoff.ru/${p.isin}x160.png" alt="" ` +
+                      `onerror="this.outerHTML='<span class=&quot;pf-icon-fallback&quot;>${letter}</span>'">`
+                    : `<span class="pf-icon-fallback">${letter}</span>`;
+                return `<tr><td><div class="pf-asset">${icon}<span>${p.name || '—'}</span></div></td>` +
+                    `<td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
                     `<td class="num">${nfmt.format(p.quantity || 0)}</td>` +
                     `<td class="num">${price}</td><td class="num">${value}</td><td class="num">${share}</td></tr>`;
-            }).join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
+            });
+            // Свободные денежные средства (по валютам)
+            (data.cash || []).forEach(c => {
+                const value = c.value != null ? nfmt.format(Math.round(c.value)) + ' ' + curSym : '—';
+                const share = (c.value != null && denom > 0) ? (c.value / denom * 100).toFixed(1) + '%' : '—';
+                rows.push(`<tr><td><div class="pf-asset"><span class="pf-icon-fallback">₽</span><span>Свободные средства</span></div></td>` +
+                    `<td><span class="pf-ticker">${c.currency}</span></td>` +
+                    `<td class="num">${nfmt.format(c.amount || 0)}</td>` +
+                    `<td class="num">—</td><td class="num">${value}</td><td class="num">${share}</td></tr>`);
+            });
+            document.getElementById('pfPositionsBody').innerHTML = rows.join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
 
             document.getElementById('pfTradesBody').innerHTML = (data.trades || []).map(t => {
                 const buy = (t.side || '').toLowerCase().includes('покуп');
@@ -1568,7 +1651,7 @@
                 const result = await r.json();
                 if (r.ok) {
                     status.className = 'upload-status ok';
-                    status.innerText = `Готово: позиций ${result.positions_count}, сделок ${result.trades_count}. Загружаем котировки…`;
+                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Можно загрузить ещё отчёты за другие периоды. Обновляем…`;
                     await loadPortfolio(); // перезагрузка с живыми ценами MOEX
                 } else {
                     status.className = 'upload-status err';

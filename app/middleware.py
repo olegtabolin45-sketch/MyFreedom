@@ -17,7 +17,7 @@ _CSP = "; ".join(
         "script-src 'self' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
+        "img-src 'self' data: https://invest-brands.cdn-tinkoff.ru",
         "connect-src 'self'",
         "base-uri 'self'",
         "form-action 'self'",

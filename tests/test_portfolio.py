@@ -81,6 +81,36 @@ def test_parser_extracts_positions_and_trades():
     assert t["quantity"] == 10
 
 
+def test_reimport_dedupes_trades(client, registered):
+    """Повторная загрузка того же отчёта не создаёт дублей сделок (слияние)."""
+    token = registered["access_token"]
+    report = _build_sample_report()
+    files = {
+        "file": (
+            "report.xlsx",
+            report,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
+    first = client.post("/api/portfolio/import", params={"token": token}, files=files)
+    assert first.json()["new_trades"] == 1
+    second = client.post(
+        "/api/portfolio/import",
+        params={"token": token},
+        files={
+            "file": (
+                "report.xlsx",
+                report,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert second.json()["new_trades"] == 0  # дубли не добавились
+
+    got = client.get("/api/portfolio", params={"token": token}).json()
+    assert len(got["trades"]) == 1
+
+
 def test_import_and_get_portfolio(client, registered):
     token = registered["access_token"]
     report = _build_sample_report()
@@ -98,8 +128,7 @@ def test_import_and_get_portfolio(client, registered):
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["positions_count"] == 1
-    assert body["trades_count"] == 1
+    assert body["new_trades"] == 1
 
     got = client.get("/api/portfolio", params={"token": token})
     assert got.status_code == 200
