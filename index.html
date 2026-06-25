@@ -1659,6 +1659,21 @@
                 pfXirr.innerText = '— %';
             }
 
+            // Пассивный доход (прогноз дивидендов/купонов на 12 мес)
+            const pfIncome = document.getElementById('pfIncome');
+            const pfIncomeYield = document.getElementById('pfIncomeYield');
+            if (data.passive_income != null) {
+                pfIncome.classList.remove('muted'); pfIncome.classList.add('pf-pos');
+                pfIncome.innerText = `≈ ${nfmt.format(Math.round(data.passive_income))} ${curSym}`;
+                pfIncomeYield.innerText = data.passive_yield != null
+                    ? `≈ ${data.passive_yield}% к активам · в год (оценка по MOEX)`
+                    : 'в год (оценка)';
+            } else {
+                pfIncome.classList.add('muted'); pfIncome.classList.remove('pf-pos');
+                pfIncome.innerText = `— ${curSym}`;
+                pfIncomeYield.innerText = '— % к стоимости активов';
+            }
+
             const denom = headline || total || 0;
             let rows = (data.positions || []).map(p => {
                 const price = p.price != null ? num2.format(p.price) + ' ' + curSym : '—';

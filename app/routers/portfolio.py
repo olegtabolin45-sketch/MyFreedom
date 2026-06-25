@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit, metrics, quotes
+from app import audit, dividends, metrics, quotes
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -107,6 +107,15 @@ async def get_portfolio(token: str):
 
         # Метрики по модели Snowball: вложено = пополнения−выводы, прибыль = стоимость−вложено
         m = metrics.compute_metrics(trades, portfolio_total, cashflows)
+
+        # Пассивный доход (прогноз дивидендов/купонов на 12 мес) и доходность к активам
+        inc = dividends.annual_income(positions)
+        passive_income = inc["total"]
+        passive_yield = (
+            round(passive_income / total_value * 100, 2)
+            if has_quotes and total_value > 0 and passive_income
+            else None
+        )
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
@@ -124,6 +133,8 @@ async def get_portfolio(token: str):
             "dividends": m["dividends"],
             "commissions": m["commissions"],
             "taxes": m["taxes"],
+            "passive_income": passive_income or None,
+            "passive_yield": passive_yield,
         }
     except HTTPException:
         raise
