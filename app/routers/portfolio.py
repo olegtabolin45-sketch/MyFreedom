@@ -81,13 +81,39 @@ async def get_portfolio(token: str):
             (email,),
         )
         cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
+
+        # Денежные остатки → рубли по курсу ЦБ
+        cursor.execute(
+            "SELECT currency, amount FROM portfolio_cash WHERE email = %s",
+            (email,),
+        )
+        cash_rows = cursor.fetchall()
+        fx = quotes.get_fx_rates() if cash_rows else {}
+        cash = []
+        cash_value = 0.0
+        for currency, amount in cash_rows:
+            rate = fx.get(currency, 1.0 if currency == "RUB" else None)
+            value_rub = round(amount * rate, 2) if rate else None
+            if value_rub:
+                cash_value += value_rub
+            cash.append({"currency": currency, "amount": amount, "value": value_rub})
+
+        # Прибыль/доходность считаем по бумагам; кэш показываем отдельно
         tv = round(total_value, 2) if has_quotes else None
         m = metrics.compute_metrics(trades, tv, cashflows)
+
+        # Итоговая стоимость портфеля = бумаги + свободные средства
+        portfolio_total = None
+        if has_quotes or cash_value:
+            portfolio_total = round(total_value + cash_value, 2)
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
             "trades": trades,
             "total_value": tv,
+            "cash": cash,
+            "cash_value": round(cash_value, 2) if cash else None,
+            "portfolio_total": portfolio_total,
             "day_change": round(day_change, 2) if has_quotes else None,
             "value_currency": "RUB",
             "invested": m["invested"],
@@ -202,6 +228,13 @@ async def import_report(token: str, request: Request, file: UploadFile):
                     "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
                     "VALUES (%s, %s, %s, %s, %s)",
                     (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
+                )
+            # Денежные остатки тоже из самого свежего отчёта
+            cursor.execute("DELETE FROM portfolio_cash WHERE email = %s", (email,))
+            for currency, amount in parsed.get("cash", {}).items():
+                cursor.execute(
+                    "INSERT INTO portfolio_cash (email, currency, amount) VALUES (%s, %s, %s)",
+                    (email, currency, amount),
                 )
             if meta:
                 cursor.execute(

@@ -121,6 +121,35 @@ def _parse_date_any(s: str):
     return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ""
 
 
+_KNOWN_CURRENCIES = {"RUB", "USD", "EUR", "CNY", "GBP", "CHF", "JPY", "HKD", "KZT", "TRY"}
+
+
+def _parse_cash_balances(ws) -> dict[str, float]:
+    """Свободные денежные остатки по валютам (таблица балансов секции 2, «Исходящий остаток»)."""
+    start = _find_section_row(ws, "операции с денежными")
+    if start is None:
+        return {}
+    out: dict[str, float] = {}
+    header = None
+    for r in range(start + 1, min(start + 20, ws.max_row + 1)):
+        a = ws.cell(row=r, column=1).value
+        if a and "Валюта" in str(a):
+            header = r
+            break
+    if header is None:
+        return {}
+    for r in range(header + 1, ws.max_row + 1):
+        a = ws.cell(row=r, column=1).value
+        code = str(a).strip() if a else ""
+        closing = ws.cell(row=r, column=21).value  # колонка U — «Исходящий остаток»
+        if code not in _KNOWN_CURRENCIES or closing is None:
+            break  # конец таблицы балансов
+        amt = _to_float(closing)
+        if amt:
+            out[code] = amt
+    return out
+
+
 def _parse_cashflows(ws) -> list[dict]:
     """Дивиденды/купоны и налоги из секции «2. Операции с денежными средствами»."""
     start = _find_section_row(ws, "операции с денежными")
@@ -224,10 +253,13 @@ def parse_broker_report(file_bytes: bytes) -> dict:
         if cf["date"] > report_date:
             report_date = cf["date"]
 
+    cash = _parse_cash_balances(ws)
+
     wb.close()
     return {
         "positions": positions,
         "trades": trades,
         "cashflows": cashflows,
+        "cash": cash,
         "report_date": report_date,
     }

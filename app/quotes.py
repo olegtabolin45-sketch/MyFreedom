@@ -98,6 +98,32 @@ def _fetch_bonds(tickers: list[str]) -> dict[str, tuple[float, float | None, str
     return out
 
 
+_fx_cache: tuple[dict[str, float], float] | None = None
+_CBR_URL = "https://www.cbr-xml-daily.ru/daily_json.js"
+
+
+def get_fx_rates() -> dict[str, float]:
+    """Курсы валют к рублю (ЦБ РФ), кэш 30 минут. RUB=1. Ошибки не пробрасываются."""
+    global _fx_cache
+    if not config.QUOTES_ENABLED:
+        return {"RUB": 1.0}
+    now = time.time()
+    if _fx_cache and now - _fx_cache[1] < _CACHE_TTL:
+        return _fx_cache[0]
+    rates = {"RUB": 1.0}
+    try:
+        data = _http_json(_CBR_URL)
+        for code, info in data.get("Valute", {}).items():
+            nominal = info.get("Nominal", 1) or 1
+            value = info.get("Value")
+            if value:
+                rates[code] = value / nominal
+    except Exception as e:
+        logger.warning("Не удалось получить курсы валют ЦБ: %s", e)
+    _fx_cache = (rates, now)
+    return rates
+
+
 def get_quotes(tickers: list[str]) -> dict[str, dict]:
     """Возвращает {ticker: {price, currency}} с кэшем. Сетевые ошибки не пробрасываются."""
     if not config.QUOTES_ENABLED or not tickers:

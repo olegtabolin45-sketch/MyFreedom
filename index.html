@@ -1525,33 +1525,47 @@
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const r = await fetch(API_BASE + '/api/portfolio?token=' + token);
-                if (!r.ok) return;
+                if (!r.ok) { renderPortfolio(null); return; }
                 const data = await r.json();
                 renderPortfolio(data);
-            } catch (e) { /* портфель пуст / сеть */ }
+            } catch (e) { renderPortfolio(null); }
+        }
+
+        function resetPortfolioMetrics() {
+            const set = (id, txt) => { const e = document.getElementById(id); if (e) { e.innerText = txt; e.classList.add('muted'); e.classList.remove('pf-pos', 'pf-neg'); } };
+            set('pfValue', '— ₽'); set('pfProfit', '— ₽'); set('pfXirr', '— %'); set('pfIncome', '— ₽');
+            document.getElementById('pfInvested').innerText = 'Вложено: —';
+            document.getElementById('pfProfitDay').innerText = 'За день: —';
+            document.getElementById('pfIncomeYield').innerText = '— % к стоимости активов';
+            document.getElementById('pfPositionsBody').innerHTML = '';
+            document.getElementById('pfTradesBody').innerHTML = '';
+            document.getElementById('pfData').style.display = 'none';
         }
 
         function renderPortfolio(data) {
             const hasData = data && data.has_data;
-            document.getElementById('pfData').style.display = hasData ? 'block' : 'none';
-            if (!hasData) return;
+            if (!hasData) { resetPortfolioMetrics(); return; }
+            document.getElementById('pfData').style.display = 'block';
 
             const total = data.total_value || 0;
             const cur = data.value_currency || '₽';
             const curSym = CURRENCY_SYMBOLS[cur] || cur;
+            // Стоимость портфеля = бумаги + свободные средства
+            const headline = data.portfolio_total != null ? data.portfolio_total : data.total_value;
 
             // Метрика «Текущая стоимость портфеля»
             const pfVal = document.getElementById('pfValue');
-            if (data.total_value != null) {
+            if (headline != null) {
                 pfVal.classList.remove('muted');
-                pfVal.innerText = `${nfmt.format(Math.round(total))} ${curSym}`;
+                pfVal.innerText = `${nfmt.format(Math.round(headline))} ${curSym}`;
             } else {
                 pfVal.classList.add('muted');
                 pfVal.innerText = `— ${curSym}`;
             }
-            // Вложено
-            document.getElementById('pfInvested').innerText =
-                data.invested != null ? `Вложено: ${nfmt.format(Math.round(data.invested))} ${curSym}` : 'Вложено: —';
+            // Подпись: вложено + свободные средства
+            let sub = data.invested != null ? `Вложено: ${nfmt.format(Math.round(data.invested))} ${curSym}` : 'Вложено: —';
+            if (data.cash_value) sub += `  ·  Свободно: ${nfmt.format(Math.round(data.cash_value))} ${curSym}`;
+            document.getElementById('pfInvested').innerText = sub;
 
             // Прибыль + изменение за день (с цветом)
             const pfProfit = document.getElementById('pfProfit');
@@ -1586,10 +1600,11 @@
                 pfXirr.innerText = '— %';
             }
 
-            document.getElementById('pfPositionsBody').innerHTML = (data.positions || []).map(p => {
+            const denom = headline || total || 0;
+            let rows = (data.positions || []).map(p => {
                 const price = p.price != null ? num2.format(p.price) + ' ' + curSym : '—';
                 const value = p.value != null ? nfmt.format(Math.round(p.value)) + ' ' + curSym : '—';
-                const share = (p.value != null && total > 0) ? (p.value / total * 100).toFixed(1) + '%' : '—';
+                const share = (p.value != null && denom > 0) ? (p.value / denom * 100).toFixed(1) + '%' : '—';
                 const letter = (p.name || p.ticker || '?').trim().charAt(0).toUpperCase();
                 // Иконка бренда по ISIN (CDN Т-Банка); при отсутствии — буква-заглушка
                 const icon = p.isin
@@ -1600,7 +1615,17 @@
                     `<td><span class="pf-ticker">${p.ticker || '—'}</span></td>` +
                     `<td class="num">${nfmt.format(p.quantity || 0)}</td>` +
                     `<td class="num">${price}</td><td class="num">${value}</td><td class="num">${share}</td></tr>`;
-            }).join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
+            });
+            // Свободные денежные средства (по валютам)
+            (data.cash || []).forEach(c => {
+                const value = c.value != null ? nfmt.format(Math.round(c.value)) + ' ' + curSym : '—';
+                const share = (c.value != null && denom > 0) ? (c.value / denom * 100).toFixed(1) + '%' : '—';
+                rows.push(`<tr><td><div class="pf-asset"><span class="pf-icon-fallback">₽</span><span>Свободные средства</span></div></td>` +
+                    `<td><span class="pf-ticker">${c.currency}</span></td>` +
+                    `<td class="num">${nfmt.format(c.amount || 0)}</td>` +
+                    `<td class="num">—</td><td class="num">${value}</td><td class="num">${share}</td></tr>`);
+            });
+            document.getElementById('pfPositionsBody').innerHTML = rows.join('') || '<tr><td colspan="6">Нет открытых позиций</td></tr>';
 
             document.getElementById('pfTradesBody').innerHTML = (data.trades || []).map(t => {
                 const buy = (t.side || '').toLowerCase().includes('покуп');
