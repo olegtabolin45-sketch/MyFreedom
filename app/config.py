@@ -54,6 +54,9 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", "5"))
 DB_MAX_OVERFLOW = int(os.environ.get("DB_MAX_OVERFLOW", "10"))
 
+# --- T-Bank Invest API (дивиденды/купоны; токен только из окружения) ---
+TINKOFF_TOKEN = os.environ.get("TINKOFF_TOKEN", "")
+
 # --- Trino (зарезервировано для аналитики капитала, см. ROADMAP, этап 4) ---
 TRINO_HOST = os.environ.get("TRINO_HOST", "127.0.0.1")
 TRINO_PORT = int(os.environ.get("TRINO_PORT", "8080"))

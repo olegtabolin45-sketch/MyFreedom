@@ -85,6 +85,13 @@ def annual_income(positions: list[dict]) -> dict:
     """
     if not config.QUOTES_ENABLED:
         return {"total": 0.0, "by_ticker": {}}
+    # Приоритет — T-Bank Invest API (точные объявленные выплаты), иначе MOEX (с задержкой)
+    from app import tbank
+
+    if tbank.is_enabled():
+        result = tbank.annual_income(positions)
+        if result["total"] > 0:
+            return result
     total = 0.0
     by_ticker = {}
     for p in positions:
