@@ -443,9 +443,60 @@
         @media (max-width: 700px) { .alloc-body { grid-template-columns: 1fr; justify-items: center; } .alloc-chart svg { width: 240px; height: 240px; } }
 
         /* Кликабельная карточка стоимости + раскрывающаяся разбивка */
-        .pf-card-clickable { cursor: pointer; }
+        .pf-card-clickable { cursor: pointer; position: relative; }
         .pf-card-clickable:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
+        .pf-card-clickable:hover .pf-expand-hint { color: #5b6ef5; }
+        .pf-expand-hint { display: flex; align-items: center; gap: 5px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f0f2; font-size: 12px; font-weight: 600; color: #86868b; transition: color 0.2s ease; }
+        .pf-chevron { transition: transform 0.25s ease; display: inline-block; font-size: 14px; }
+        .pf-chevron.open { transform: rotate(180deg); }
         .value-breakdown { margin-bottom: 16px; animation: dashIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Кнопка «Добавить портфель» */
+        .add-portfolio-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+        .btn-add-portfolio {
+            height: 48px; padding: 0 24px; background: #1d1d1f; color: #fff; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-add-portfolio:hover { background: #000; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+        .add-portfolio-hint { font-size: 13px; color: #86868b; }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(20, 20, 25, 0.45); backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px); z-index: 100; display: flex; align-items: flex-start;
+            justify-content: center; padding: 60px 20px; overflow-y: auto;
+            animation: overlayIn 0.2s ease;
+        }
+        @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal {
+            position: relative; width: 100%; max-width: 480px; background: #fff; border-radius: 20px;
+            padding: 32px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border: none; background: #f0f0f2; border-radius: 50%; font-size: 20px; color: #86868b; cursor: pointer; transition: all 0.2s ease; line-height: 1; }
+        .modal-close:hover { background: #e5e5ea; color: #1d1d1f; }
+        .modal-title { font-size: 22px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; }
+        .modal-sub { font-size: 14px; color: #86868b; margin-bottom: 22px; }
+        .bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+        .bank-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px; border: 1.5px solid #e5e5ea; border-radius: 14px; cursor: pointer; transition: all 0.18s ease; }
+        .bank-card.selected { border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .bank-card.soon { opacity: 0.55; cursor: not-allowed; }
+        .bank-logo { width: 38px; height: 38px; border-radius: 10px; background: #ffdd2d; color: #1d1d1f; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; }
+        .bank-logo.sb { background: #21a038; color: #fff; } .bank-logo.vtb { background: #0a2972; color: #fff; } .bank-logo.bcs { background: #003791; color: #fff; }
+        .bank-name { font-size: 13px; font-weight: 500; color: #1d1d1f; }
+        .soon-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: #c7c7cc; padding: 1px 6px; border-radius: 6px; }
+        .bank-card.soon .soon-badge { position: absolute; top: 6px; right: 6px; }
+        .method-title { font-size: 13px; font-weight: 600; color: #515154; margin-bottom: 10px; }
+        .method-list { display: flex; flex-direction: column; gap: 10px; }
+        .method-card { display: flex; align-items: center; gap: 14px; padding: 16px; background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; cursor: pointer; text-align: left; transition: all 0.18s ease; width: 100%; }
+        .method-card:hover { border-color: #1d1d1f; background: #fafafa; }
+        .method-card.disabled { opacity: 0.6; cursor: not-allowed; }
+        .method-card.disabled:hover { border-color: #e5e5ea; background: #fff; }
+        .method-icon { font-size: 24px; flex-shrink: 0; }
+        .method-text { display: flex; flex-direction: column; gap: 3px; }
+        .method-text b { font-size: 15px; font-weight: 600; color: #1d1d1f; display: flex; align-items: center; gap: 8px; }
+        .method-text span { font-size: 12.5px; color: #86868b; }
+        .modal-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 18px; }
 
         /* Баннер утверждения цели */
         .approve-banner {
@@ -606,13 +657,13 @@
         <!-- ВКЛАДКА «ОБЩЕЕ»: портфель -->
         <div class="tab-panel" id="tabGeneral">
             <div class="pf-grid">
-                <div class="pf-card pf-card-clickable" id="pfValueCard" onclick="toggleValueBreakdown()" title="Нажмите, чтобы увидеть разбивку из счёта">
+                <div class="pf-card pf-card-clickable" id="pfValueCard" onclick="toggleValueBreakdown()">
                     <div class="pf-head">
                         <span class="pf-label">Текущая стоимость портфеля</span>
-                        <span class="pf-info">ⓘ</span>
                     </div>
                     <div class="pf-value muted" id="pfValue">— ₽</div>
                     <div class="pf-sub" id="pfInvested">Вложено: —</div>
+                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron" id="pfChevron">⌄</span></div>
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
@@ -640,15 +691,11 @@
                 </div>
             </div>
 
-            <!-- Зона загрузки отчёта брокера -->
-            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('reportFile').click()">
-                <div class="upload-icon">📄</div>
-                <h3>Загрузите отчёт брокера</h3>
-                <p>Перетащите сюда или выберите xlsx-отчёт из Т-Банка — мы автоматически распознаем ваши активы и сделки. (Брокерские отчёты за период: «Отчёт о сделках и операциях».)</p>
-                <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
-                <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            <!-- Кнопка добавления портфеля (открывает модальное окно) -->
+            <div class="add-portfolio-row">
+                <button class="btn-add-portfolio" onclick="openAddModal()">＋ Добавить портфель</button>
+                <span class="add-portfolio-hint">Загрузите отчёт брокера или подключите счёт</span>
             </div>
-            <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Прибыль и доходность (XIRR) считаются по сделкам из загруженного отчёта — для точности загрузите отчёты за весь период владения. Цены обновляются раз в 30 минут во время работы биржи; иностранные котировки и подключение брокеров по API — на следующих этапах.</div>
 
             <!-- Раскрывающаяся разбивка из счёта (по клику на «Текущая стоимость портфеля») -->
             <div class="dash-card value-breakdown" id="valueBreakdown" style="display: none;">
@@ -685,7 +732,7 @@
                         <tbody id="pfPositionsBody"></tbody>
                     </table>
                 </div>
-                <div class="pf-reupload">Данные из отчёта. <a onclick="document.getElementById('reportFile').click()">Загрузить новый отчёт</a></div>
+                <div class="pf-reupload">Данные из отчёта. <a onclick="openAddModal()">Добавить ещё отчёт</a></div>
             </div>
         </div>
 
@@ -861,6 +908,41 @@
             </div>
         </form>
         <div id="obError" class="message"></div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: добавление портфеля -->
+    <div class="modal-overlay" id="addModal" style="display: none;" onclick="if(event.target===this)closeAddModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeAddModal()">×</button>
+            <h2 class="modal-title">Добавить портфель</h2>
+            <p class="modal-sub">Выберите банк и способ добавления активов.</p>
+
+            <div class="bank-grid">
+                <div class="bank-card selected" data-bank="tbank">
+                    <span class="bank-logo">Т</span>
+                    <span class="bank-name">Т-Банк</span>
+                </div>
+                <div class="bank-card soon"><span class="bank-logo sb">С</span><span class="bank-name">Сбер</span><span class="soon-badge">скоро</span></div>
+                <div class="bank-card soon"><span class="bank-logo vtb">В</span><span class="bank-name">ВТБ</span><span class="soon-badge">скоро</span></div>
+                <div class="bank-card soon"><span class="bank-logo bcs">Б</span><span class="bank-name">БКС</span><span class="soon-badge">скоро</span></div>
+            </div>
+
+            <div class="method-title">Способ для Т-Банка</div>
+            <div class="method-list">
+                <button class="method-card" onclick="document.getElementById('reportFile').click()">
+                    <span class="method-icon">📄</span>
+                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Брокерский отчёт «о сделках и операциях» за период</span></span>
+                </button>
+                <button class="method-card disabled" onclick="alert('Подключение по API — добавим на следующем этапе.')">
+                    <span class="method-icon">🔌</span>
+                    <span class="method-text"><b>Подключить по API <span class="soon-badge">скоро</span></b><span>Автосинхронизация сделок и цен напрямую от брокера</span></span>
+                </button>
+            </div>
+
+            <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
+            <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Можно загрузить несколько отчётов за разные периоды — данные накапливаются.</div>
+        </div>
     </div>
 
     <script>
@@ -1566,8 +1648,16 @@
         // Раскрытие разбивки по клику на «Текущая стоимость портфеля»
         function toggleValueBreakdown() {
             const b = document.getElementById('valueBreakdown');
-            b.style.display = b.style.display === 'none' ? 'block' : 'none';
+            const open = b.style.display === 'none';
+            b.style.display = open ? 'block' : 'none';
+            const ch = document.getElementById('pfChevron');
+            if (ch) ch.classList.toggle('open', open);
         }
+
+        // Модальное окно добавления портфеля
+        function openAddModal() { document.getElementById('addModal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        function closeAddModal() { document.getElementById('addModal').style.display = 'none'; document.body.style.overflow = ''; }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAddModal(); });
 
         // Раскрытие полной легенды диаграммы (топ-10 → все)
         let _allocExpanded = false;
@@ -1825,8 +1915,9 @@
                 const result = await r.json();
                 if (r.ok) {
                     status.className = 'upload-status ok';
-                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Можно загрузить ещё отчёты за другие периоды. Обновляем…`;
+                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Обновляем…`;
                     await loadPortfolio(); // перезагрузка с живыми ценами MOEX
+                    setTimeout(closeAddModal, 900); // закрыть окно после успеха
                 } else {
                     status.className = 'upload-status err';
                     status.innerText = result.detail || 'Не удалось обработать отчёт.';
