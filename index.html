@@ -1664,10 +1664,9 @@
             const pfIncomeYield = document.getElementById('pfIncomeYield');
             if (data.passive_income != null) {
                 pfIncome.classList.remove('muted'); pfIncome.classList.add('pf-pos');
-                pfIncome.innerText = `≈ ${nfmt.format(Math.round(data.passive_income))} ${curSym}`;
-                pfIncomeYield.innerText = data.passive_yield != null
-                    ? `≈ ${data.passive_yield}% к активам · в год (оценка по MOEX)`
-                    : 'в год (оценка)';
+                // Крупно — доходность %, снизу — сумма в год
+                pfIncome.innerText = data.passive_yield != null ? `${data.passive_yield}%` : '—';
+                pfIncomeYield.innerText = `≈ ${nfmt.format(Math.round(data.passive_income))} ${curSym} в год`;
             } else {
                 pfIncome.classList.add('muted'); pfIncome.classList.remove('pf-pos');
                 pfIncome.innerText = `— ${curSym}`;
