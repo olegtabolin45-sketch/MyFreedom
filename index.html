@@ -424,20 +424,28 @@
 
         /* Диаграмма распределения портфеля */
         .alloc-card { margin-bottom: 16px; }
-        .alloc-body { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: center; }
+        .alloc-body { display: grid; grid-template-columns: 320px 1fr; gap: 36px; align-items: center; }
         .alloc-chart { position: relative; display: flex; align-items: center; justify-content: center; }
-        .alloc-chart svg { width: 200px; height: 200px; transform: rotate(-90deg); }
+        .alloc-chart svg { width: 300px; height: 300px; transform: rotate(-90deg); }
         .alloc-seg { transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1); }
         .alloc-center { position: absolute; text-align: center; }
-        .alloc-center .v { font-size: 22px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
-        .alloc-center .c { font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
-        .alloc-legend { display: flex; flex-direction: column; gap: 10px; }
-        .alloc-item { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-        .alloc-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+        .alloc-center .v { font-size: 30px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .alloc-center .c { font-size: 12px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .alloc-side { min-width: 0; }
+        .alloc-legend { display: flex; flex-direction: column; gap: 6px; }
+        .alloc-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+        .alloc-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
         .alloc-name { color: #1d1d1f; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .alloc-pct { color: #1d1d1f; font-weight: 600; font-variant-numeric: tabular-nums; }
-        .alloc-val { color: #86868b; font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
-        @media (max-width: 700px) { .alloc-body { grid-template-columns: 1fr; justify-items: center; } }
+        .alloc-val { color: #86868b; font-variant-numeric: tabular-nums; min-width: 78px; text-align: right; }
+        .alloc-more { display: inline-block; margin-top: 10px; font-size: 13px; color: #5b6ef5; cursor: pointer; font-weight: 500; }
+        .alloc-more:hover { text-decoration: underline; }
+        @media (max-width: 700px) { .alloc-body { grid-template-columns: 1fr; justify-items: center; } .alloc-chart svg { width: 240px; height: 240px; } }
+
+        /* Кликабельная карточка стоимости + раскрывающаяся разбивка */
+        .pf-card-clickable { cursor: pointer; }
+        .pf-card-clickable:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
+        .value-breakdown { margin-bottom: 16px; animation: dashIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 
         /* Баннер утверждения цели */
         .approve-banner {
@@ -591,16 +599,17 @@
         <!-- Вкладки (появляются после утверждения цели) -->
         <div class="dash-tabs" id="dashTabs" style="display: none;">
             <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
+            <button class="dash-tab" data-tab="trades" onclick="switchTab('trades')">Сделки</button>
             <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
         </div>
 
         <!-- ВКЛАДКА «ОБЩЕЕ»: портфель -->
         <div class="tab-panel" id="tabGeneral">
             <div class="pf-grid">
-                <div class="pf-card">
+                <div class="pf-card pf-card-clickable" id="pfValueCard" onclick="toggleValueBreakdown()" title="Нажмите, чтобы увидеть разбивку из счёта">
                     <div class="pf-head">
                         <span class="pf-label">Текущая стоимость портфеля</span>
-                        <span class="pf-info" title="Вложено — сумма покупок всех текущих (непроданных) активов плюс свободная валюта. Текущая цена активов обновляется раз в 30 минут во время работы биржи. По иностранным активам берётся цена с зарубежных бирж (NYSE, NASDAQ, LSE…), источник курсов валют — FOREX.">i</span>
+                        <span class="pf-info">ⓘ</span>
                     </div>
                     <div class="pf-value muted" id="pfValue">— ₽</div>
                     <div class="pf-sub" id="pfInvested">Вложено: —</div>
@@ -641,6 +650,18 @@
             </div>
             <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Прибыль и доходность (XIRR) считаются по сделкам из загруженного отчёта — для точности загрузите отчёты за весь период владения. Цены обновляются раз в 30 минут во время работы биржи; иностранные котировки и подключение брокеров по API — на следующих этапах.</div>
 
+            <!-- Раскрывающаяся разбивка из счёта (по клику на «Текущая стоимость портфеля») -->
+            <div class="dash-card value-breakdown" id="valueBreakdown" style="display: none;">
+                <div class="dash-card-title">Разбивка из счёта</div>
+                <div class="dash-card-hint">Точные суммы за всё время по данным вашего отчёта</div>
+                <div class="brk-grid">
+                    <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
+                </div>
+            </div>
+
             <!-- Данные портфеля (после загрузки) -->
             <div id="pfData" style="display: none;">
                 <div class="dash-card alloc-card">
@@ -651,17 +672,10 @@
                             <svg id="allocChart" viewBox="0 0 120 120"></svg>
                             <div class="alloc-center"><div class="v" id="allocTotal">—</div><div class="c">всего</div></div>
                         </div>
-                        <div class="alloc-legend" id="allocLegend"></div>
-                    </div>
-                </div>
-                <div class="dash-card" style="margin-bottom: 16px;">
-                    <div class="dash-card-title">Разбивка из брокерского отчёта</div>
-                    <div class="dash-card-hint">Точные суммы за всё время по данным отчёта Т-Банка</div>
-                    <div class="brk-grid">
-                        <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
-                        <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
-                        <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
-                        <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
+                        <div class="alloc-side">
+                            <div class="alloc-legend" id="allocLegend"></div>
+                            <a class="alloc-more" id="allocMore" style="display: none;" onclick="toggleAllocMore()">Показать все</a>
+                        </div>
                     </div>
                 </div>
                 <div class="pf-section-title">Активы в портфеле</div>
@@ -671,15 +685,20 @@
                         <tbody id="pfPositionsBody"></tbody>
                     </table>
                 </div>
-                <div class="pf-section-title">Сделки</div>
-                <div class="pf-table-wrap">
-                    <table class="pf-table">
-                        <thead><tr><th>Дата</th><th>Операция</th><th>Актив</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th><th class="num">Комиссия</th></tr></thead>
-                        <tbody id="pfTradesBody"></tbody>
-                    </table>
-                </div>
                 <div class="pf-reupload">Данные из отчёта. <a onclick="document.getElementById('reportFile').click()">Загрузить новый отчёт</a></div>
             </div>
+        </div>
+
+        <!-- ВКЛАДКА «СДЕЛКИ» -->
+        <div class="tab-panel" id="tabTrades">
+            <div class="pf-section-title" style="margin-top: 0;">Сделки</div>
+            <div class="pf-table-wrap">
+                <table class="pf-table">
+                    <thead><tr><th>Дата</th><th>Операция</th><th>Актив</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th><th class="num">Комиссия</th></tr></thead>
+                    <tbody id="pfTradesBody"></tbody>
+                </table>
+            </div>
+            <div id="tradesEmpty" class="pf-note" style="display:none;">Сделок нет. Загрузите отчёт на вкладке «Общее».</div>
         </div>
 
         <!-- ВКЛАДКА «ЦЕЛЬ»: стратегия и прогнозы -->
@@ -1540,7 +1559,21 @@
                 t.classList.toggle('active', t.dataset.tab === name);
             });
             document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
+            document.getElementById('tabTrades').classList.toggle('active', name === 'trades');
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
+        }
+
+        // Раскрытие разбивки по клику на «Текущая стоимость портфеля»
+        function toggleValueBreakdown() {
+            const b = document.getElementById('valueBreakdown');
+            b.style.display = b.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Раскрытие полной легенды диаграммы (топ-10 → все)
+        let _allocExpanded = false;
+        function toggleAllocMore() {
+            _allocExpanded = !_allocExpanded;
+            if (window._allocItems) renderAllocLegend(window._allocItems, window._allocDenom, window._allocSym);
         }
 
         // Применяет режим: до утверждения — предпросмотр цели с баннером; после — вкладки
@@ -1719,6 +1752,7 @@
                               '#00b3a4', '#e0508a', '#7a8b99', '#c9a227', '#3aa0ff', '#9b59b6'];
 
         function renderAllocation(data, denom, curSym) {
+            _allocExpanded = false;  // при обновлении портфеля сворачиваем легенду
             const svg = document.getElementById('allocChart');
             const legend = document.getElementById('allocLegend');
             // Собираем доли: бумаги с ценой + свободные средства
@@ -1752,7 +1786,18 @@
             });
             svg.innerHTML = segs;
 
-            legend.innerHTML = items.map((it, i) => {
+            // Легенда: топ-10, остальное по «Показать все»
+            window._allocItems = items; window._allocDenom = total; window._allocSym = curSym;
+            renderAllocLegend(items, total, curSym);
+        }
+
+        const ALLOC_TOP = 10;
+        function renderAllocLegend(items, total, curSym) {
+            const legend = document.getElementById('allocLegend');
+            const more = document.getElementById('allocMore');
+            const shown = _allocExpanded ? items : items.slice(0, ALLOC_TOP);
+            legend.innerHTML = shown.map((it) => {
+                const i = items.indexOf(it);
                 const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
                 const pct = (it.value / total * 100).toFixed(1);
                 return `<div class="alloc-item"><span class="alloc-dot" style="background:${color}"></span>` +
@@ -1760,6 +1805,12 @@
                     `<span class="alloc-pct">${pct}%</span>` +
                     `<span class="alloc-val">${nfmt.format(Math.round(it.value))} ${curSym}</span></div>`;
             }).join('');
+            if (items.length > ALLOC_TOP) {
+                more.style.display = 'inline-block';
+                more.innerText = _allocExpanded ? 'Свернуть' : `Показать все (${items.length})`;
+            } else {
+                more.style.display = 'none';
+            }
         }
 
         async function uploadReport(fileObj) {
