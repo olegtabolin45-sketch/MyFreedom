@@ -168,9 +168,14 @@ def _parse_cashflows(ws) -> list[dict]:
         credit = _to_float(ws.cell(row=r, column=53).value)  # BA — зачисление
         debit = _to_float(ws.cell(row=r, column=66).value)  # BN — списание
         if "выплата доходов" in op_l and credit:
+            # Начисления (дивиденды/купоны) — зачислены уже за вычетом налога с дивидендов
             out.append({"date": date, "kind": "dividend", "amount": round(credit, 2)})
-        elif "налог" in op_l and debit:
-            out.append({"date": date, "kind": "tax", "amount": round(debit, 2)})
+        elif "комиссия" in op_l and debit:
+            out.append({"date": date, "kind": "commission", "amount": round(debit, 2)})
+        elif "налог" in op_l:
+            # Налог с дивидендов уже отражён в чистых начислениях — в строку «налоги» не идёт
+            if "дивиденд" not in op_l:
+                out.append({"date": date, "kind": "tax", "amount": round(credit - debit, 2)})
         elif "пополнение счета" in op_l and credit:
             out.append({"date": date, "kind": "deposit", "amount": round(credit, 2)})
         elif "вывод средств" in op_l and debit:

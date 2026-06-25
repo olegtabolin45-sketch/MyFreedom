@@ -98,14 +98,14 @@ async def get_portfolio(token: str):
                 cash_value += value_rub
             cash.append({"currency": currency, "amount": amount, "value": value_rub})
 
-        # Прибыль/доходность считаем по бумагам; кэш показываем отдельно
-        tv = round(total_value, 2) if has_quotes else None
-        m = metrics.compute_metrics(trades, tv, cashflows)
-
         # Итоговая стоимость портфеля = бумаги + свободные средства
+        tv = round(total_value, 2) if has_quotes else None
         portfolio_total = None
         if has_quotes or cash_value:
             portfolio_total = round(total_value + cash_value, 2)
+
+        # Метрики по модели Snowball: вложено = пополнения−выводы, прибыль = стоимость−вложено
+        m = metrics.compute_metrics(trades, portfolio_total, cashflows)
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
@@ -121,6 +121,8 @@ async def get_portfolio(token: str):
             "profit_pct": m["profit_pct"],
             "xirr": m["xirr"],
             "dividends": m["dividends"],
+            "commissions": m["commissions"],
+            "taxes": m["taxes"],
         }
     except HTTPException:
         raise

@@ -415,6 +415,13 @@
         .pf-reupload { margin-top: 16px; font-size: 13px; color: #86868b; }
         .pf-reupload a { color: #1d1d1f; font-weight: 500; cursor: pointer; text-decoration: underline; }
 
+        /* Разбивка из отчёта */
+        .brk-grid { display: flex; flex-direction: column; gap: 2px; }
+        .brk-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f0f0f2; }
+        .brk-row:last-child { border-bottom: none; }
+        .brk-label { font-size: 14px; color: #515154; }
+        .brk-val { font-size: 15px; font-weight: 600; color: #1d1d1f; font-variant-numeric: tabular-nums; }
+
         /* Диаграмма распределения портфеля */
         .alloc-card { margin-bottom: 16px; }
         .alloc-body { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: center; }
@@ -645,6 +652,16 @@
                             <div class="alloc-center"><div class="v" id="allocTotal">—</div><div class="c">всего</div></div>
                         </div>
                         <div class="alloc-legend" id="allocLegend"></div>
+                    </div>
+                </div>
+                <div class="dash-card" style="margin-bottom: 16px;">
+                    <div class="dash-card-title">Разбивка из брокерского отчёта</div>
+                    <div class="dash-card-hint">Точные суммы за всё время по данным отчёта Т-Банка</div>
+                    <div class="brk-grid">
+                        <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
+                        <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
+                        <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
+                        <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
                     </div>
                 </div>
                 <div class="pf-section-title">Активы в портфеле</div>
@@ -1596,6 +1613,18 @@
             let sub = data.invested != null ? `Вложено: ${nfmt.format(Math.round(data.invested))} ${curSym}` : 'Вложено: —';
             if (data.cash_value) sub += `  ·  Свободно: ${nfmt.format(Math.round(data.cash_value))} ${curSym}`;
             document.getElementById('pfInvested').innerText = sub;
+
+            // Разбивка из отчёта (точные суммы)
+            const fmtSigned = (v) => (v >= 0 ? '+' : '−') + nfmt.format(Math.abs(Math.round(v))) + ' ' + curSym;
+            const setBrk = (id, v, neg) => {
+                const el = document.getElementById(id); if (!el || v == null) { if (el) el.innerText = '—'; return; }
+                el.innerText = neg ? '−' + nfmt.format(Math.round(Math.abs(v))) + ' ' + curSym : fmtSigned(v);
+            };
+            setBrk('brkDiv', data.dividends);
+            setBrk('brkComm', data.commissions, true);
+            const brkTax = document.getElementById('brkTax');
+            if (data.taxes != null) { brkTax.innerText = fmtSigned(data.taxes); brkTax.classList.toggle('pf-pos', data.taxes >= 0); brkTax.classList.toggle('pf-neg', data.taxes < 0); }
+            document.getElementById('brkInvested').innerText = data.invested != null ? nfmt.format(Math.round(data.invested)) + ' ' + curSym : '—';
 
             // Прибыль + изменение за день (с цветом)
             const pfProfit = document.getElementById('pfProfit');

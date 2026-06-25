@@ -69,53 +69,49 @@ def compute_metrics(
     total_value: float | None,
     cashflows: list[dict] | None = None,
 ) -> dict:
-    """Метрики по сделкам бумаг, дивидендам/налогам и текущей стоимости.
+    """Метрики портфеля по модели Snowball.
 
-    Валютные сделки (is_fx) исключаются — это конвертация валют, а не P&L бумаг.
-    Прибыль = текущая стоимость − чистые вложения + дивиденды − налоги.
+    Вложено = пополнения − выводы (внешние переводы по счёту).
+    Прибыль = стоимость портфеля (бумаги + свободные средства) − вложено.
+    Дивиденды/комиссии/налоги — точные агрегаты из денежной секции отчёта.
+
+    total_value здесь — ПОЛНАЯ стоимость портфеля (бумаги + кэш).
     """
     cashflows = cashflows or []
-    invested_cash = 0.0  # потрачено на покупки (с комиссией)
-    returned_cash = 0.0  # получено с продаж (за вычетом комиссии)
-    first_date: date | None = None
 
+    first_date: date | None = None
     for t in trades:
-        if t.get("is_fx"):
-            continue  # конвертация валют — не учитываем
-        amount = float(t.get("amount") or 0)
-        commission = float(t.get("commission") or 0)
         d = _parse_date(t.get("date") or "")
         if d and (first_date is None or d < first_date):
             first_date = d
-        if _is_buy(t.get("side", "")):
-            invested_cash += amount + commission
-        else:
-            returned_cash += amount - commission
 
+    deposits = sum(c["amount"] for c in cashflows if c.get("kind") == "deposit")
+    withdrawals = sum(c["amount"] for c in cashflows if c.get("kind") == "withdrawal")
     dividends = sum(c["amount"] for c in cashflows if c.get("kind") == "dividend")
-    taxes = sum(c["amount"] for c in cashflows if c.get("kind") == "tax")
+    commissions = sum(c["amount"] for c in cashflows if c.get("kind") == "commission")
+    taxes = sum(c["amount"] for c in cashflows if c.get("kind") == "tax")  # знаковые
+
+    invested = deposits - withdrawals  # «Вложено» по Snowball
 
     result = {
-        "invested": None,
+        "invested": round(invested, 2),
         "profit": None,
         "profit_pct": None,
         "xirr": None,
         "dividends": round(dividends, 2),
+        "commissions": round(commissions, 2),
+        "taxes": round(taxes, 2),
     }
 
-    if total_value is not None:
-        net_invested = invested_cash - returned_cash
-        result["invested"] = round(net_invested, 2)
-        profit = total_value - net_invested + dividends - taxes
+    if total_value is not None and invested > 0:
+        profit = total_value - invested
         result["profit"] = round(profit, 2)
-        if net_invested > 0:
-            result["profit_pct"] = round(profit / net_invested * 100, 2)
-            # Среднегодовая доходность (CAGR) на вложенный капитал за период владения
-            if first_date is not None:
-                years = (date.today() - first_date).days / 365.0
-                terminal = total_value + dividends - taxes
-                if years > 0.05 and terminal > 0:
-                    cagr = (terminal / net_invested) ** (1 / years) - 1
-                    result["xirr"] = round(cagr * 100, 2)
+        result["profit_pct"] = round(profit / invested * 100, 2)
+        # Среднегодовая доходность (CAGR) на вложенный капитал за период владения
+        if first_date is not None:
+            years = (date.today() - first_date).days / 365.0
+            if years > 0.05 and total_value > 0:
+                cagr = (total_value / invested) ** (1 / years) - 1
+                result["xirr"] = round(cagr * 100, 2)
 
     return result
