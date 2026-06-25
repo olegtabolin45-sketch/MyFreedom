@@ -88,12 +88,13 @@ async def get_portfolio(token: str):
             (email,),
         )
         cash_rows = cursor.fetchall()
-        fx = quotes.get_fx_rates() if cash_rows else {}
         cash = []
         cash_value = 0.0
+        # Учитываем только рублёвые остатки: валютные остатки в отчёте — это часто
+        # неисполненные/расчётные позиции (T+), их корректная оценка требует учёта
+        # сеттлмента. Иначе стоимость портфеля завышается (#snowball-mismatch).
         for currency, amount in cash_rows:
-            rate = fx.get(currency, 1.0 if currency == "RUB" else None)
-            value_rub = round(amount * rate, 2) if rate else None
+            value_rub = round(amount, 2) if currency == "RUB" else None
             if value_rub:
                 cash_value += value_rub
             cash.append({"currency": currency, "amount": amount, "value": value_rub})
