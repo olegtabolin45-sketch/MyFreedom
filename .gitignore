@@ -15,6 +15,9 @@ env/
 # Локальные настройки Claude Code
 .claude/
 
+# Артефакты graphify (локальный граф знаний)
+graphify-out/
+
 # OS
 Thumbs.db
 .DS_Store

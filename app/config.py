@@ -50,6 +50,9 @@ DB_PORT = int(os.environ.get("DB_PORT", "5433"))
 DB_NAME = os.environ.get("DB_NAME", "aeterna")
 DB_USER = os.environ.get("DB_USER", "aeterna")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+# Пул соединений: постоянных + временных «overflow» под пик
+DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", "5"))
+DB_MAX_OVERFLOW = int(os.environ.get("DB_MAX_OVERFLOW", "10"))
 
 # --- Trino (зарезервировано для аналитики капитала, см. ROADMAP, этап 4) ---
 TRINO_HOST = os.environ.get("TRINO_HOST", "127.0.0.1")

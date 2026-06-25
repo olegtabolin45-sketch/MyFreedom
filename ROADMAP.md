@@ -55,7 +55,7 @@
 - [ ] **CDN + WAF** (Cloudflare / подобное) — первая линия защиты от DDoS, фильтрация трафика
 - [ ] Reverse-proxy (Nginx) с rate limiting и таймаутами
 - [ ] Кэширование тяжёлых аналитических запросов в Redis
-- [ ] Connection pooling к БД
+- [x] Connection pooling к БД. ✅ Пул SQLAlchemy (QueuePool, pre_ping, recycle 30 мин) в `app/db.py`; `get_db_connection()` отдаёт соединение из пула — все ~20 эндпоинтов получили пулинг без изменений. Настройки `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`. (Выявлено через граф: god-node `get_db_connection` — мост на 20 вызовов.)
 - [ ] Защита от ботов (капча на регистрации/логине)
 - [ ] Мониторинг аномального трафика
 
