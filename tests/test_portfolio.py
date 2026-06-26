@@ -160,6 +160,35 @@ def test_aggregate_sums_portfolios(client, registered):
     assert gazp["quantity"] == 20  # 10 + 10
 
 
+def test_aggregate_ignores_orphan_rows(client, registered):
+    """«Общий капитал» не учитывает строки без portfolio_id (старые импорты)."""
+    from app.db import get_db_connection
+
+    token = registered["access_token"]
+    email = registered["email"]
+    pid = _make_portfolio(client, token)
+    report = _build_sample_report()
+    client.post(
+        "/api/portfolio/import",
+        params={"token": token, "portfolio_id": pid},
+        files=_xlsx_files(report),
+    )
+    # Осиротевшая позиция тем же тикером (как от импорта до мультипортфелей)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO portfolio_positions (email, portfolio_id, ticker, name, isin, quantity) "
+        "VALUES (%s, NULL, 'GAZP', 'ГАЗПРОМ ао', 'RU0007661625', 99)",
+        (email,),
+    )
+    conn.commit()
+    conn.close()
+
+    agg = client.get("/api/portfolio", params={"token": token, "portfolio_id": "all"}).json()
+    gazp = next(p for p in agg["positions"] if p["ticker"] == "GAZP")
+    assert gazp["quantity"] == 10  # только привязанная позиция, осиротевшая (99) исключена
+
+
 def test_import_preview_reports_summary_without_saving(client, registered):
     """Предпросмотр возвращает сводку и не пишет в портфель."""
     token = registered["access_token"]

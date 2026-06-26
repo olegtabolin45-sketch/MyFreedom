@@ -29,7 +29,9 @@ def _scope(portfolio_id: str):
         except ValueError as e:
             raise HTTPException(status_code=400, detail="Некорректный portfolio_id.") from e
         return " AND portfolio_id = %s", (pid,)
-    return "", ()
+    # Агрегат «Общий капитал»: только данные, привязанные к портфелям
+    # (исключаем осиротевшие строки portfolio_id IS NULL от старых импортов).
+    return " AND portfolio_id IS NOT NULL", ()
 
 
 @router.get("")
