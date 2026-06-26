@@ -273,7 +273,7 @@
         .ob-countries-hint { margin-top: 14px; font-size: 13px; color: #86868b; }
 
         /* ===== Личный кабинет (дашборд) ===== */
-        .dash { max-width: 1000px; margin: 32px auto 64px; padding: 0 24px; width: 100%; }
+        .dash { max-width: 1340px; margin: 32px auto 64px; padding: 0 32px; width: 100%; }
         @keyframes dashIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .reveal { opacity: 0; animation: dashIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
@@ -681,7 +681,7 @@
                     </div>
                     <div class="pf-value muted" id="pfValue">— ₽</div>
                     <div class="pf-sub" id="pfInvested">Вложено: —</div>
-                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron" id="pfChevron">⌄</span></div>
+                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron">→</span></div>
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
@@ -713,18 +713,6 @@
             <div class="add-portfolio-row">
                 <button class="btn-add-portfolio" onclick="openAddModal()">＋ Добавить портфель</button>
                 <span class="add-portfolio-hint">Загрузите отчёт брокера или подключите счёт</span>
-            </div>
-
-            <!-- Раскрывающаяся разбивка из счёта (по клику на «Текущая стоимость портфеля») -->
-            <div class="dash-card value-breakdown" id="valueBreakdown" style="display: none;">
-                <div class="dash-card-title">Разбивка из счёта</div>
-                <div class="dash-card-hint">Точные суммы за всё время по данным вашего отчёта</div>
-                <div class="brk-grid">
-                    <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
-                </div>
             </div>
 
             <!-- Данные портфеля (после загрузки) -->
@@ -972,6 +960,21 @@
             <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
             <div class="upload-status" id="uploadStatus" style="display: none;"></div>
             <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Можно загрузить несколько отчётов за разные периоды — данные накапливаются.</div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: разбивка из счёта -->
+    <div class="modal-overlay" id="breakdownModal" style="display: none;" onclick="if(event.target===this)closeBreakdownModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeBreakdownModal()">×</button>
+            <h2 class="modal-title">Разбивка из счёта</h2>
+            <p class="modal-sub">Точные суммы за всё время по данным вашего отчёта.</p>
+            <div class="brk-grid">
+                <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
+                <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
+                <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
+                <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
+            </div>
         </div>
     </div>
 
@@ -1675,19 +1678,20 @@
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
         }
 
-        // Раскрытие разбивки по клику на «Текущая стоимость портфеля»
+        // Разбивка из счёта — модальное окно (по клику на «Текущая стоимость портфеля»)
         function toggleValueBreakdown() {
-            const b = document.getElementById('valueBreakdown');
-            const open = b.style.display === 'none';
-            b.style.display = open ? 'block' : 'none';
-            const ch = document.getElementById('pfChevron');
-            if (ch) ch.classList.toggle('open', open);
+            document.getElementById('breakdownModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeBreakdownModal() {
+            document.getElementById('breakdownModal').style.display = 'none';
+            document.body.style.overflow = '';
         }
 
         // Модальное окно добавления портфеля
         function openAddModal() { document.getElementById('addModal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
         function closeAddModal() { document.getElementById('addModal').style.display = 'none'; document.body.style.overflow = ''; }
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAddModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAddModal(); closeBreakdownModal(); } });
 
         // Раскрытие полной легенды диаграммы (топ-10 → все)
         let _allocExpanded = false;
