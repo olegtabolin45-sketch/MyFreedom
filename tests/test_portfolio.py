@@ -81,56 +81,57 @@ def test_parser_extracts_positions_and_trades():
     assert t["quantity"] == 10
 
 
-def test_reimport_dedupes_trades(client, registered):
-    """Повторная загрузка того же отчёта не создаёт дублей сделок (слияние)."""
-    token = registered["access_token"]
-    report = _build_sample_report()
-    files = {
+def _make_portfolio(client, token, name="Брокер") -> int:
+    """Создаёт портфель и возвращает его id."""
+    resp = client.post(
+        "/api/portfolios",
+        params={"token": token},
+        json={"name": name},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()["id"]
+
+
+def _xlsx_files(report):
+    return {
         "file": (
             "report.xlsx",
             report,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
     }
-    first = client.post("/api/portfolio/import", params={"token": token}, files=files)
+
+
+def test_reimport_dedupes_trades(client, registered):
+    """Повторная загрузка того же отчёта не создаёт дублей сделок (слияние)."""
+    token = registered["access_token"]
+    pid = _make_portfolio(client, token)
+    report = _build_sample_report()
+    params = {"token": token, "portfolio_id": pid}
+    first = client.post("/api/portfolio/import", params=params, files=_xlsx_files(report))
     assert first.json()["new_trades"] == 1
-    second = client.post(
-        "/api/portfolio/import",
-        params={"token": token},
-        files={
-            "file": (
-                "report.xlsx",
-                report,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        },
-    )
+    second = client.post("/api/portfolio/import", params=params, files=_xlsx_files(report))
     assert second.json()["new_trades"] == 0  # дубли не добавились
 
-    got = client.get("/api/portfolio", params={"token": token}).json()
+    got = client.get("/api/portfolio", params={"token": token, "portfolio_id": pid}).json()
     assert len(got["trades"]) == 1
 
 
 def test_import_and_get_portfolio(client, registered):
     token = registered["access_token"]
+    pid = _make_portfolio(client, token)
     report = _build_sample_report()
 
     resp = client.post(
         "/api/portfolio/import",
-        params={"token": token},
-        files={
-            "file": (
-                "report.xlsx",
-                report,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        },
+        params={"token": token, "portfolio_id": pid},
+        files=_xlsx_files(report),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["new_trades"] == 1
 
-    got = client.get("/api/portfolio", params={"token": token})
+    got = client.get("/api/portfolio", params={"token": token, "portfolio_id": pid})
     assert got.status_code == 200
     data = got.json()
     assert data["has_data"] is True
@@ -138,10 +139,33 @@ def test_import_and_get_portfolio(client, registered):
     assert data["trades"][0]["side"] == "Покупка"
 
 
+def test_aggregate_sums_portfolios(client, registered):
+    """portfolio_id=all суммирует позиции одинаковых тикеров из разных портфелей."""
+    token = registered["access_token"]
+    p1 = _make_portfolio(client, token, "Первый")
+    p2 = _make_portfolio(client, token, "Второй")
+    report = _build_sample_report()
+    client.post(
+        "/api/portfolio/import",
+        params={"token": token, "portfolio_id": p1},
+        files=_xlsx_files(report),
+    )
+    client.post(
+        "/api/portfolio/import",
+        params={"token": token, "portfolio_id": p2},
+        files=_xlsx_files(report),
+    )
+    agg = client.get("/api/portfolio", params={"token": token, "portfolio_id": "all"}).json()
+    gazp = next(p for p in agg["positions"] if p["ticker"] == "GAZP")
+    assert gazp["quantity"] == 20  # 10 + 10
+
+
 def test_import_rejects_non_xlsx(client, registered):
+    token = registered["access_token"]
+    pid = _make_portfolio(client, token)
     resp = client.post(
         "/api/portfolio/import",
-        params={"token": registered["access_token"]},
+        params={"token": token, "portfolio_id": pid},
         files={"file": ("report.txt", b"not a spreadsheet", "text/plain")},
     )
     assert resp.status_code == 400

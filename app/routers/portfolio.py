@@ -1,4 +1,8 @@
-"""Портфель: импорт брокерского отчёта и выдача позиций/сделок."""
+"""Портфель: импорт брокерского отчёта и выдача позиций/сделок.
+
+Данные привязаны к конкретному портфелю (portfolio_id). Запрос с
+portfolio_id=all агрегирует все портфели пользователя («Общий капитал»).
+"""
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
@@ -14,26 +18,39 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 MAX_FILE_BYTES = 5 * 1024 * 1024
 
 
+def _scope(portfolio_id: str):
+    """Возвращает (sql_filter, params_tail) для WHERE по портфелю или агрегату."""
+    if portfolio_id and portfolio_id != "all":
+        try:
+            pid = int(portfolio_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Некорректный portfolio_id.") from e
+        return " AND portfolio_id = %s", (pid,)
+    return "", ()
+
+
 @router.get("")
-async def get_portfolio(token: str):
-    """Текущие позиции и сделки пользователя."""
+async def get_portfolio(token: str, portfolio_id: str = "all"):
+    """Позиции/сделки портфеля (или агрегат всех при portfolio_id=all)."""
     email = decode_access_token(token)
+    flt, tail = _scope(portfolio_id)
 
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Позиции (агрегируем по тикеру — для «Общего капитала» одинаковые бумаги суммируются)
         cursor.execute(
-            "SELECT name, ticker, isin, quantity FROM portfolio_positions "
-            "WHERE email = %s ORDER BY name",
-            (email,),
+            "SELECT name, ticker, isin, SUM(quantity) FROM portfolio_positions "
+            "WHERE email = %s" + flt + " GROUP BY ticker, name, isin HAVING SUM(quantity) > 0 "
+            "ORDER BY name",
+            (email, *tail),
         )
         positions = [
             {"name": r[0], "ticker": r[1], "isin": r[2], "quantity": r[3]}
             for r in cursor.fetchall()
         ]
 
-        # Подмешиваем живые котировки MOEX, считаем стоимость и изменение за день
         quote_map = quotes.get_quotes([p["ticker"] for p in positions])
         total_value = 0.0
         day_change = 0.0
@@ -57,8 +74,8 @@ async def get_portfolio(token: str):
         cursor.execute(
             "SELECT trade_date, trade_time, side, name, ticker, price, currency, "
             "quantity, amount, commission, is_fx FROM portfolio_trades "
-            "WHERE email = %s ORDER BY id",
-            (email,),
+            "WHERE email = %s" + flt + " ORDER BY id",
+            (email, *tail),
         )
         trades = [
             {
@@ -76,6 +93,7 @@ async def get_portfolio(token: str):
             }
             for r in cursor.fetchall()
         ]
+
         # Средняя цена покупки по тикеру (для «вложено» и дохода позиции; приближённо)
         buy_amt: dict[str, float] = {}
         buy_qty: dict[str, float] = {}
@@ -86,7 +104,6 @@ async def get_portfolio(token: str):
             buy_amt[tk] = buy_amt.get(tk, 0.0) + (t.get("amount") or 0)
             buy_qty[tk] = buy_qty.get(tk, 0.0) + (t.get("quantity") or 0)
 
-        # Категории (секторы) позиций — из T-Bank, если подключён
         categories = {}
         try:
             categories = tbank.get_categories(positions) if tbank.is_enabled() else {}
@@ -104,38 +121,32 @@ async def get_portfolio(token: str):
                 p["pos_profit"] = None
 
         cursor.execute(
-            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
-            (email,),
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows " "WHERE email = %s" + flt,
+            (email, *tail),
         )
         cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
 
-        # Денежные остатки → рубли по курсу ЦБ
         cursor.execute(
-            "SELECT currency, amount FROM portfolio_cash WHERE email = %s",
-            (email,),
+            "SELECT currency, SUM(amount) FROM portfolio_cash "
+            "WHERE email = %s" + flt + " GROUP BY currency",
+            (email, *tail),
         )
         cash_rows = cursor.fetchall()
         cash = []
         cash_value = 0.0
-        # Учитываем только рублёвые остатки: валютные остатки в отчёте — это часто
-        # неисполненные/расчётные позиции (T+), их корректная оценка требует учёта
-        # сеттлмента. Иначе стоимость портфеля завышается (#snowball-mismatch).
         for currency, amount in cash_rows:
             value_rub = round(amount, 2) if currency == "RUB" else None
             if value_rub:
                 cash_value += value_rub
             cash.append({"currency": currency, "amount": amount, "value": value_rub})
 
-        # Итоговая стоимость портфеля = бумаги + свободные средства
         tv = round(total_value, 2) if has_quotes else None
         portfolio_total = None
         if has_quotes or cash_value:
             portfolio_total = round(total_value + cash_value, 2)
 
-        # Метрики по модели Snowball: вложено = пополнения−выводы, прибыль = стоимость−вложено
         m = metrics.compute_metrics(trades, portfolio_total, cashflows)
 
-        # Пассивный доход (прогноз дивидендов/купонов на 12 мес) и доходность к активам
         inc = dividends.annual_income(positions)
         passive_income = inc["total"]
         passive_yield = (
@@ -174,8 +185,8 @@ async def get_portfolio(token: str):
 
 
 @router.post("/import")
-async def import_report(token: str, request: Request, file: UploadFile):
-    """Загрузка брокерского отчёта Т-Банка (.xlsx): парсинг и сохранение."""
+async def import_report(token: str, portfolio_id: int, request: Request, file: UploadFile):
+    """Загрузка брокерского отчёта Т-Банка (.xlsx) в конкретный портфель."""
     email = decode_access_token(token)
 
     if not (file.filename or "").lower().endswith(".xlsx"):
@@ -206,11 +217,20 @@ async def import_report(token: str, request: Request, file: UploadFile):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # --- Сделки: накапливаем из всех отчётов, дедуп по ключу ---
+        cursor.execute(
+            "SELECT positions_asof FROM portfolios WHERE id = %s AND email = %s",
+            (portfolio_id, email),
+        )
+        meta = cursor.fetchone()
+        if meta is None:
+            raise HTTPException(status_code=404, detail="Портфель не найден.")
+        prev_asof = meta[0]
+
+        # --- Сделки: накапливаем в этом портфеле, дедуп ---
         cursor.execute(
             "SELECT trade_date, trade_time, ticker, side, quantity, amount "
-            "FROM portfolio_trades WHERE email = %s",
-            (email,),
+            "FROM portfolio_trades WHERE email = %s AND portfolio_id = %s",
+            (email, portfolio_id),
         )
         existing_trades = {tuple(r) for r in cursor.fetchall()}
         new_trades = 0
@@ -222,11 +242,12 @@ async def import_report(token: str, request: Request, file: UploadFile):
             new_trades += 1
             cursor.execute(
                 "INSERT INTO portfolio_trades "
-                "(email, trade_date, trade_time, side, ticker, name, price, currency, "
-                "quantity, amount, commission, is_fx) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(email, portfolio_id, trade_date, trade_time, side, ticker, name, price, "
+                "currency, quantity, amount, commission, is_fx) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     email,
+                    portfolio_id,
                     t["date"],
                     t["time"],
                     t["side"],
@@ -241,10 +262,11 @@ async def import_report(token: str, request: Request, file: UploadFile):
                 ),
             )
 
-        # --- Денежные потоки (дивиденды/налоги): накапливаем, дедуп ---
+        # --- Денежные потоки: накапливаем, дедуп ---
         cursor.execute(
-            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
-            (email,),
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows "
+            "WHERE email = %s AND portfolio_id = %s",
+            (email, portfolio_id),
         )
         existing_cf = {tuple(r) for r in cursor.fetchall()}
         for cf in cashflows:
@@ -253,53 +275,49 @@ async def import_report(token: str, request: Request, file: UploadFile):
                 continue
             existing_cf.add(key)
             cursor.execute(
-                "INSERT INTO portfolio_cashflows (email, flow_date, kind, amount) "
-                "VALUES (%s, %s, %s, %s)",
-                (email, cf["date"], cf["kind"], cf["amount"]),
+                "INSERT INTO portfolio_cashflows (email, portfolio_id, flow_date, kind, amount) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (email, portfolio_id, cf["date"], cf["kind"], cf["amount"]),
             )
 
-        # --- Позиции: берём из самого свежего отчёта ---
-        cursor.execute("SELECT positions_asof FROM portfolio_meta WHERE email = %s", (email,))
-        meta = cursor.fetchone()
-        prev_asof = meta[0] if meta else None
+        # --- Позиции и кэш: из самого свежего отчёта по этому портфелю ---
         if positions and (prev_asof is None or report_date >= prev_asof):
-            cursor.execute("DELETE FROM portfolio_positions WHERE email = %s", (email,))
+            cursor.execute(
+                "DELETE FROM portfolio_positions WHERE email = %s AND portfolio_id = %s",
+                (email, portfolio_id),
+            )
             for p in positions:
                 cursor.execute(
-                    "INSERT INTO portfolio_positions (email, ticker, name, isin, quantity) "
-                    "VALUES (%s, %s, %s, %s, %s)",
-                    (email, p["ticker"], p["name"], p["isin"], p["quantity"]),
+                    "INSERT INTO portfolio_positions "
+                    "(email, portfolio_id, ticker, name, isin, quantity) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (email, portfolio_id, p["ticker"], p["name"], p["isin"], p["quantity"]),
                 )
-            # Денежные остатки тоже из самого свежего отчёта
-            cursor.execute("DELETE FROM portfolio_cash WHERE email = %s", (email,))
+            cursor.execute(
+                "DELETE FROM portfolio_cash WHERE email = %s AND portfolio_id = %s",
+                (email, portfolio_id),
+            )
             for currency, amount in parsed.get("cash", {}).items():
                 cursor.execute(
-                    "INSERT INTO portfolio_cash (email, currency, amount) VALUES (%s, %s, %s)",
-                    (email, currency, amount),
+                    "INSERT INTO portfolio_cash (email, portfolio_id, currency, amount) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (email, portfolio_id, currency, amount),
                 )
-            if meta:
-                cursor.execute(
-                    "UPDATE portfolio_meta SET positions_asof = %s WHERE email = %s",
-                    (report_date, email),
-                )
-            else:
-                cursor.execute(
-                    "INSERT INTO portfolio_meta (email, positions_asof) VALUES (%s, %s)",
-                    (email, report_date),
-                )
+            cursor.execute(
+                "UPDATE portfolios SET positions_asof = %s WHERE id = %s",
+                (report_date, portfolio_id),
+            )
 
         conn.commit()
         audit.record_event(
             request,
             audit.PORTFOLIO_IMPORT,
             email=email,
-            detail=f"new_trades={new_trades} report_date={report_date}",
+            detail=f"portfolio={portfolio_id} new_trades={new_trades}",
         )
-        return {
-            "status": "success",
-            "new_trades": new_trades,
-            "report_date": report_date,
-        }
+        return {"status": "success", "new_trades": new_trades, "report_date": report_date}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Ошибка сохранения портфеля: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка сохранения портфеля.") from e
