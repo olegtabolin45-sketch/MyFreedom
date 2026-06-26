@@ -40,6 +40,7 @@ services:
     container_name: aeterna-app
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      TINKOFF_TOKEN: ${TINKOFF_TOKEN:-}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://127.0.0.1:8000,http://localhost:8000}

@@ -415,6 +415,107 @@
         .pf-reupload { margin-top: 16px; font-size: 13px; color: #86868b; }
         .pf-reupload a { color: #1d1d1f; font-weight: 500; cursor: pointer; text-decoration: underline; }
 
+        /* Разбивка из отчёта */
+        .brk-grid { display: flex; flex-direction: column; gap: 2px; }
+        .brk-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f0f0f2; }
+        .brk-row:last-child { border-bottom: none; }
+        .brk-label { font-size: 14px; color: #515154; }
+        .brk-val { font-size: 15px; font-weight: 600; color: #1d1d1f; font-variant-numeric: tabular-nums; }
+
+        /* Диаграмма распределения портфеля */
+        .alloc-card { margin-bottom: 16px; }
+        .alloc-body { display: grid; grid-template-columns: 320px 1fr; gap: 36px; align-items: center; }
+        .alloc-chart { position: relative; display: flex; align-items: center; justify-content: center; }
+        .alloc-chart svg { width: 300px; height: 300px; transform: rotate(-90deg); }
+        .alloc-seg { transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .alloc-center { position: absolute; text-align: center; }
+        .alloc-center .v { font-size: 30px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
+        .alloc-center .c { font-size: 12px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .alloc-side { min-width: 0; }
+        .alloc-seg-path { cursor: pointer; transition: opacity 0.15s ease; }
+        .alloc-seg-path.dim { opacity: 0.35; }
+        .alloc-tooltip { position: absolute; pointer-events: none; background: #1d1d1f; color: #fff; padding: 7px 11px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; transform: translate(-50%, -130%); z-index: 5; box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+        .alloc-tooltip b { font-weight: 600; }
+
+        /* Заголовок с переключателем */
+        .alloc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .alloc-toggle { display: inline-flex; background: #f0f0f2; border-radius: 10px; padding: 3px; }
+        .alloc-tg { border: none; background: none; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #86868b; border-radius: 8px; cursor: pointer; transition: all 0.18s ease; }
+        .alloc-tg.active { background: #fff; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        /* Таблица-легенда */
+        .alloc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .alloc-table th { text-align: right; padding: 6px 8px; font-size: 11px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e5e5ea; }
+        .alloc-table th:first-child { text-align: left; }
+        .alloc-table td { padding: 8px; border-bottom: 1px solid #f5f5f7; font-variant-numeric: tabular-nums; }
+        .alloc-table tr:last-child td { border-bottom: none; }
+        .alloc-table tr.hl td { background: #fafafa; }
+        .alloc-name-cell { display: flex; align-items: center; gap: 8px; }
+        .alloc-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+        .alloc-name { color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .alloc-num { text-align: right; color: #515154; }
+        .alloc-pctcell { text-align: right; font-weight: 600; color: #1d1d1f; }
+        .alloc-profit { text-align: right; font-weight: 600; white-space: nowrap; }
+        .alloc-more { display: inline-block; margin-top: 10px; font-size: 13px; color: #5b6ef5; cursor: pointer; font-weight: 500; }
+        .alloc-more:hover { text-decoration: underline; }
+        @media (max-width: 860px) { .alloc-body { grid-template-columns: 1fr; } .alloc-chart svg { width: 240px; height: 240px; } }
+
+        /* Кликабельная карточка стоимости + раскрывающаяся разбивка */
+        .pf-card-clickable { cursor: pointer; position: relative; }
+        .pf-card-clickable:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
+        .pf-card-clickable:hover .pf-expand-hint { color: #5b6ef5; }
+        .pf-expand-hint { display: flex; align-items: center; gap: 5px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f0f2; font-size: 12px; font-weight: 600; color: #86868b; transition: color 0.2s ease; }
+        .pf-chevron { transition: transform 0.25s ease; display: inline-block; font-size: 14px; }
+        .pf-chevron.open { transform: rotate(180deg); }
+        .value-breakdown { margin-bottom: 16px; animation: dashIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Кнопка «Добавить портфель» */
+        .add-portfolio-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+        .btn-add-portfolio {
+            height: 48px; padding: 0 24px; background: #1d1d1f; color: #fff; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-add-portfolio:hover { background: #000; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+        .add-portfolio-hint { font-size: 13px; color: #86868b; }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(20, 20, 25, 0.45); backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px); z-index: 100; display: flex; align-items: flex-start;
+            justify-content: center; padding: 60px 20px; overflow-y: auto;
+            animation: overlayIn 0.2s ease;
+        }
+        @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal {
+            position: relative; width: 100%; max-width: 480px; background: #fff; border-radius: 20px;
+            padding: 32px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border: none; background: #f0f0f2; border-radius: 50%; font-size: 20px; color: #86868b; cursor: pointer; transition: all 0.2s ease; line-height: 1; }
+        .modal-close:hover { background: #e5e5ea; color: #1d1d1f; }
+        .modal-title { font-size: 22px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; }
+        .modal-sub { font-size: 14px; color: #86868b; margin-bottom: 22px; }
+        .bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+        .bank-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px; border: 1.5px solid #e5e5ea; border-radius: 14px; cursor: pointer; transition: all 0.18s ease; }
+        .bank-card.selected { border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .bank-card.soon { opacity: 0.55; cursor: not-allowed; }
+        .bank-logo { width: 38px; height: 38px; border-radius: 10px; background: #ffdd2d; color: #1d1d1f; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; }
+        .bank-logo.sb { background: #21a038; color: #fff; } .bank-logo.vtb { background: #0a2972; color: #fff; } .bank-logo.bcs { background: #003791; color: #fff; }
+        .bank-name { font-size: 13px; font-weight: 500; color: #1d1d1f; }
+        .soon-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: #c7c7cc; padding: 1px 6px; border-radius: 6px; }
+        .bank-card.soon .soon-badge { position: absolute; top: 6px; right: 6px; }
+        .method-title { font-size: 13px; font-weight: 600; color: #515154; margin-bottom: 10px; }
+        .method-list { display: flex; flex-direction: column; gap: 10px; }
+        .method-card { display: flex; align-items: center; gap: 14px; padding: 16px; background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; cursor: pointer; text-align: left; transition: all 0.18s ease; width: 100%; }
+        .method-card:hover { border-color: #1d1d1f; background: #fafafa; }
+        .method-card.disabled { opacity: 0.6; cursor: not-allowed; }
+        .method-card.disabled:hover { border-color: #e5e5ea; background: #fff; }
+        .method-icon { font-size: 24px; flex-shrink: 0; }
+        .method-text { display: flex; flex-direction: column; gap: 3px; }
+        .method-text b { font-size: 15px; font-weight: 600; color: #1d1d1f; display: flex; align-items: center; gap: 8px; }
+        .method-text span { font-size: 12.5px; color: #86868b; }
+        .modal-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 18px; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -567,19 +668,20 @@
         <!-- Вкладки (появляются после утверждения цели) -->
         <div class="dash-tabs" id="dashTabs" style="display: none;">
             <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
+            <button class="dash-tab" data-tab="trades" onclick="switchTab('trades')">Сделки</button>
             <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
         </div>
 
         <!-- ВКЛАДКА «ОБЩЕЕ»: портфель -->
         <div class="tab-panel" id="tabGeneral">
             <div class="pf-grid">
-                <div class="pf-card">
+                <div class="pf-card pf-card-clickable" id="pfValueCard" onclick="toggleValueBreakdown()">
                     <div class="pf-head">
                         <span class="pf-label">Текущая стоимость портфеля</span>
-                        <span class="pf-info" title="Вложено — сумма покупок всех текущих (непроданных) активов плюс свободная валюта. Текущая цена активов обновляется раз в 30 минут во время работы биржи. По иностранным активам берётся цена с зарубежных бирж (NYSE, NASDAQ, LSE…), источник курсов валют — FOREX.">i</span>
                     </div>
                     <div class="pf-value muted" id="pfValue">— ₽</div>
                     <div class="pf-sub" id="pfInvested">Вложено: —</div>
+                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron" id="pfChevron">⌄</span></div>
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
@@ -607,18 +709,52 @@
                 </div>
             </div>
 
-            <!-- Зона загрузки отчёта брокера -->
-            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('reportFile').click()">
-                <div class="upload-icon">📄</div>
-                <h3>Загрузите отчёт брокера</h3>
-                <p>Перетащите сюда или выберите xlsx-отчёт из Т-Банка — мы автоматически распознаем ваши активы и сделки. (Брокерские отчёты за период: «Отчёт о сделках и операциях».)</p>
-                <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
-                <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            <!-- Кнопка добавления портфеля (открывает модальное окно) -->
+            <div class="add-portfolio-row">
+                <button class="btn-add-portfolio" onclick="openAddModal()">＋ Добавить портфель</button>
+                <span class="add-portfolio-hint">Загрузите отчёт брокера или подключите счёт</span>
             </div>
-            <div class="pf-note">Поддерживается формат Т-Банка (.xlsx). Прибыль и доходность (XIRR) считаются по сделкам из загруженного отчёта — для точности загрузите отчёты за весь период владения. Цены обновляются раз в 30 минут во время работы биржи; иностранные котировки и подключение брокеров по API — на следующих этапах.</div>
+
+            <!-- Раскрывающаяся разбивка из счёта (по клику на «Текущая стоимость портфеля») -->
+            <div class="dash-card value-breakdown" id="valueBreakdown" style="display: none;">
+                <div class="dash-card-title">Разбивка из счёта</div>
+                <div class="dash-card-hint">Точные суммы за всё время по данным вашего отчёта</div>
+                <div class="brk-grid">
+                    <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
+                    <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
+                </div>
+            </div>
 
             <!-- Данные портфеля (после загрузки) -->
             <div id="pfData" style="display: none;">
+                <div class="dash-card alloc-card">
+                    <div class="alloc-header">
+                        <div>
+                            <div class="dash-card-title">Распределение портфеля</div>
+                            <div class="dash-card-hint">Доли в текущей стоимости</div>
+                        </div>
+                        <div class="alloc-toggle">
+                            <button class="alloc-tg active" id="allocTgAssets" onclick="setAllocMode('assets')">По активам</button>
+                            <button class="alloc-tg" id="allocTgCats" onclick="setAllocMode('categories')">По категориям</button>
+                        </div>
+                    </div>
+                    <div class="alloc-body">
+                        <div class="alloc-chart">
+                            <svg id="allocChart" viewBox="0 0 200 200"></svg>
+                            <div class="alloc-center"><div class="v" id="allocTotal">—</div><div class="c">всего</div></div>
+                            <div class="alloc-tooltip" id="allocTooltip" style="display:none;"></div>
+                        </div>
+                        <div class="alloc-side">
+                            <table class="alloc-table">
+                                <thead><tr><th>Название</th><th class="num">Доля</th><th class="num">Вложено</th><th class="num">Стоимость</th><th class="num">Доход</th></tr></thead>
+                                <tbody id="allocLegend"></tbody>
+                            </table>
+                            <a class="alloc-more" id="allocMore" style="display: none;" onclick="toggleAllocMore()">Показать все</a>
+                        </div>
+                    </div>
+                </div>
                 <div class="pf-section-title">Активы в портфеле</div>
                 <div class="pf-table-wrap">
                     <table class="pf-table">
@@ -626,15 +762,20 @@
                         <tbody id="pfPositionsBody"></tbody>
                     </table>
                 </div>
-                <div class="pf-section-title">Сделки</div>
-                <div class="pf-table-wrap">
-                    <table class="pf-table">
-                        <thead><tr><th>Дата</th><th>Операция</th><th>Актив</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th><th class="num">Комиссия</th></tr></thead>
-                        <tbody id="pfTradesBody"></tbody>
-                    </table>
-                </div>
-                <div class="pf-reupload">Данные из отчёта. <a onclick="document.getElementById('reportFile').click()">Загрузить новый отчёт</a></div>
+                <div class="pf-reupload">Данные из отчёта. <a onclick="openAddModal()">Добавить ещё отчёт</a></div>
             </div>
+        </div>
+
+        <!-- ВКЛАДКА «СДЕЛКИ» -->
+        <div class="tab-panel" id="tabTrades">
+            <div class="pf-section-title" style="margin-top: 0;">Сделки</div>
+            <div class="pf-table-wrap">
+                <table class="pf-table">
+                    <thead><tr><th>Дата</th><th>Операция</th><th>Актив</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th><th class="num">Комиссия</th></tr></thead>
+                    <tbody id="pfTradesBody"></tbody>
+                </table>
+            </div>
+            <div id="tradesEmpty" class="pf-note" style="display:none;">Сделок нет. Загрузите отчёт на вкладке «Общее».</div>
         </div>
 
         <!-- ВКЛАДКА «ЦЕЛЬ»: стратегия и прогнозы -->
@@ -799,11 +940,48 @@
         <div id="obError" class="message"></div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО: добавление портфеля -->
+    <div class="modal-overlay" id="addModal" style="display: none;" onclick="if(event.target===this)closeAddModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeAddModal()">×</button>
+            <h2 class="modal-title">Добавить портфель</h2>
+            <p class="modal-sub">Выберите банк и способ добавления активов.</p>
+
+            <div class="bank-grid">
+                <div class="bank-card selected" data-bank="tbank">
+                    <span class="bank-logo">Т</span>
+                    <span class="bank-name">Т-Банк</span>
+                </div>
+                <div class="bank-card soon"><span class="bank-logo sb">С</span><span class="bank-name">Сбер</span><span class="soon-badge">скоро</span></div>
+                <div class="bank-card soon"><span class="bank-logo vtb">В</span><span class="bank-name">ВТБ</span><span class="soon-badge">скоро</span></div>
+                <div class="bank-card soon"><span class="bank-logo bcs">Б</span><span class="bank-name">БКС</span><span class="soon-badge">скоро</span></div>
+            </div>
+
+            <div class="method-title">Способ для Т-Банка</div>
+            <div class="method-list">
+                <button class="method-card" onclick="document.getElementById('reportFile').click()">
+                    <span class="method-icon">📄</span>
+                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Брокерский отчёт «о сделках и операциях» за период</span></span>
+                </button>
+                <button class="method-card disabled" onclick="alert('Подключение по API — добавим на следующем этапе.')">
+                    <span class="method-icon">🔌</span>
+                    <span class="method-text"><b>Подключить по API <span class="soon-badge">скоро</span></b><span>Автосинхронизация сделок и цен напрямую от брокера</span></span>
+                </button>
+            </div>
+
+            <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
+            <div class="upload-status" id="uploadStatus" style="display: none;"></div>
+            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Можно загрузить несколько отчётов за разные периоды — данные накапливаются.</div>
+        </div>
+    </div>
+
     <script>
         const EYE_OPEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
         const EYE_CLOSED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
 
-        const API_BASE = 'http://127.0.0.1:8000';
+        // Относительный путь — запросы всегда идут на тот же origin, что и страница
+        // (работает и с 127.0.0.1, и с localhost; без кросс-доменных проблем).
+        const API_BASE = '';
 
         window.onload = async function() {
             setupClearButtons();
@@ -1493,7 +1671,29 @@
                 t.classList.toggle('active', t.dataset.tab === name);
             });
             document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
+            document.getElementById('tabTrades').classList.toggle('active', name === 'trades');
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
+        }
+
+        // Раскрытие разбивки по клику на «Текущая стоимость портфеля»
+        function toggleValueBreakdown() {
+            const b = document.getElementById('valueBreakdown');
+            const open = b.style.display === 'none';
+            b.style.display = open ? 'block' : 'none';
+            const ch = document.getElementById('pfChevron');
+            if (ch) ch.classList.toggle('open', open);
+        }
+
+        // Модальное окно добавления портфеля
+        function openAddModal() { document.getElementById('addModal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        function closeAddModal() { document.getElementById('addModal').style.display = 'none'; document.body.style.overflow = ''; }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAddModal(); });
+
+        // Раскрытие полной легенды диаграммы (топ-10 → все)
+        let _allocExpanded = false;
+        function toggleAllocMore() {
+            _allocExpanded = !_allocExpanded;
+            renderAllocView();
         }
 
         // Применяет режим: до утверждения — предпросмотр цели с баннером; после — вкладки
@@ -1567,6 +1767,18 @@
             if (data.cash_value) sub += `  ·  Свободно: ${nfmt.format(Math.round(data.cash_value))} ${curSym}`;
             document.getElementById('pfInvested').innerText = sub;
 
+            // Разбивка из отчёта (точные суммы)
+            const fmtSigned = (v) => (v >= 0 ? '+' : '−') + nfmt.format(Math.abs(Math.round(v))) + ' ' + curSym;
+            const setBrk = (id, v, neg) => {
+                const el = document.getElementById(id); if (!el || v == null) { if (el) el.innerText = '—'; return; }
+                el.innerText = neg ? '−' + nfmt.format(Math.round(Math.abs(v))) + ' ' + curSym : fmtSigned(v);
+            };
+            setBrk('brkDiv', data.dividends);
+            setBrk('brkComm', data.commissions, true);
+            const brkTax = document.getElementById('brkTax');
+            if (data.taxes != null) { brkTax.innerText = fmtSigned(data.taxes); brkTax.classList.toggle('pf-pos', data.taxes >= 0); brkTax.classList.toggle('pf-neg', data.taxes < 0); }
+            document.getElementById('brkInvested').innerText = data.invested != null ? nfmt.format(Math.round(data.invested)) + ' ' + curSym : '—';
+
             // Прибыль + изменение за день (с цветом)
             const pfProfit = document.getElementById('pfProfit');
             if (data.profit != null) {
@@ -1598,6 +1810,20 @@
             } else {
                 pfXirr.classList.add('muted'); pfXirr.classList.remove('pf-pos', 'pf-neg');
                 pfXirr.innerText = '— %';
+            }
+
+            // Пассивный доход (прогноз дивидендов/купонов на 12 мес)
+            const pfIncome = document.getElementById('pfIncome');
+            const pfIncomeYield = document.getElementById('pfIncomeYield');
+            if (data.passive_income != null) {
+                pfIncome.classList.remove('muted'); pfIncome.classList.add('pf-pos');
+                // Крупно — доходность %, снизу — сумма в год
+                pfIncome.innerText = data.passive_yield != null ? `${data.passive_yield}%` : '—';
+                pfIncomeYield.innerText = `≈ ${nfmt.format(Math.round(data.passive_income))} ${curSym} в год`;
+            } else {
+                pfIncome.classList.add('muted'); pfIncome.classList.remove('pf-pos');
+                pfIncome.innerText = `— ${curSym}`;
+                pfIncomeYield.innerText = '— % к стоимости активов';
             }
 
             const denom = headline || total || 0;
@@ -1637,6 +1863,158 @@
                     `<td class="num">${num2.format(t.amount || 0)} ${t.currency || ''}</td>` +
                     `<td class="num">${num2.format(t.commission || 0)}</td></tr>`;
             }).join('') || '<tr><td colspan="7">Сделок нет</td></tr>';
+
+            renderAllocation(data, denom, curSym);
+        }
+
+        // Палитра сегментов диаграммы распределения
+        const ALLOC_COLORS = ['#5b6ef5', '#24b24b', '#ff9f0a', '#2b6fd6', '#8a4fe0', '#ff5a4d',
+                              '#00b3a4', '#e0508a', '#7a8b99', '#c9a227', '#3aa0ff', '#9b59b6'];
+
+        const ALLOC_TOP = 10;
+        let _allocMode = 'assets';
+        let _allocRaw = [];   // сырые позиции {name, value, invested, profit, category}
+        let _allocSym = '₽';
+
+        function renderAllocation(data, denom, curSym) {
+            _allocExpanded = false;
+            _allocSym = curSym;
+            _allocRaw = [];
+            (data.positions || []).forEach(p => {
+                if (p.value) _allocRaw.push({
+                    name: p.name || p.ticker, value: p.value,
+                    invested: p.invested, profit: p.pos_profit, category: p.category || 'Прочее',
+                });
+            });
+            (data.cash || []).forEach(c => {
+                if (c.value) _allocRaw.push({
+                    name: 'Свободные средства (' + c.currency + ')', value: c.value,
+                    invested: c.value, profit: 0, category: 'Валюта',
+                });
+            });
+            renderAllocView();
+        }
+
+        function setAllocMode(mode) {
+            _allocMode = mode; _allocExpanded = false;
+            document.getElementById('allocTgAssets').classList.toggle('active', mode === 'assets');
+            document.getElementById('allocTgCats').classList.toggle('active', mode === 'categories');
+            renderAllocView();
+        }
+
+        // Кольцевой сегмент (annular sector)
+        function _arcPath(cx, cy, rO, rI, a0, a1) {
+            const pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+            const large = (a1 - a0) > Math.PI ? 1 : 0;
+            const [x0, y0] = pt(rO, a0), [x1, y1] = pt(rO, a1), [x2, y2] = pt(rI, a1), [x3, y3] = pt(rI, a0);
+            return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${rO} ${rO} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} ` +
+                   `L${x2.toFixed(2)} ${y2.toFixed(2)} A${rI} ${rI} 0 ${large} 0 ${x3.toFixed(2)} ${y3.toFixed(2)} Z`;
+        }
+
+        function renderAllocView() {
+            const svg = document.getElementById('allocChart');
+            const legend = document.getElementById('allocLegend');
+            const more = document.getElementById('allocMore');
+            const curSym = _allocSym;
+
+            // Группировка
+            let items;
+            if (_allocMode === 'categories') {
+                const m = {};
+                _allocRaw.forEach(it => {
+                    const g = m[it.category] || (m[it.category] = { name: it.category, value: 0, invested: 0, hasInv: false });
+                    g.value += it.value;
+                    if (it.invested != null) { g.invested += it.invested; g.hasInv = true; }
+                });
+                items = Object.values(m).map(g => ({
+                    name: g.name, value: g.value,
+                    invested: g.hasInv ? g.invested : null,
+                    profit: g.hasInv ? g.value - g.invested : null,
+                }));
+            } else {
+                items = _allocRaw.slice();
+            }
+            items.sort((a, b) => b.value - a.value);
+            const total = items.reduce((s, i) => s + i.value, 0);
+
+            if (!total) {
+                svg.innerHTML = '';
+                legend.innerHTML = '<tr><td colspan="5">Нет данных с ценами для диаграммы</td></tr>';
+                document.getElementById('allocTotal').innerText = '—';
+                more.style.display = 'none';
+                return;
+            }
+            document.getElementById('allocTotal').innerText = nfmt.format(Math.round(total / 1000)) + 'k ' + curSym;
+
+            // Дуги диаграммы (каждая — отдельная, наводимая)
+            const cx = 100, cy = 100, rO = 95, rI = 62;
+            let a = -Math.PI / 2;
+            svg.innerHTML = items.map((it, i) => {
+                const frac = it.value / total;
+                const a1 = a + frac * 2 * Math.PI;
+                const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                let d;
+                if (frac >= 0.9999) {
+                    d = `M${cx} ${cy - rO} A${rO} ${rO} 0 1 1 ${cx - 0.01} ${cy - rO} M${cx} ${cy - rI} A${rI} ${rI} 0 1 0 ${cx - 0.01} ${cy - rI}`;
+                } else {
+                    d = _arcPath(cx, cy, rO, rI, a, a1);
+                }
+                const path = `<path class="alloc-seg-path" data-i="${i}" d="${d}" fill="${color}" fill-rule="evenodd"/>`;
+                a = a1;
+                return path;
+            }).join('');
+
+            // Легенда-таблица (топ-10 + раскрытие)
+            const shown = _allocExpanded ? items : items.slice(0, ALLOC_TOP);
+            legend.innerHTML = shown.map((it) => {
+                const i = items.indexOf(it);
+                const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
+                const pct = (it.value / total * 100).toFixed(1);
+                const inv = it.invested != null ? nfmt.format(Math.round(it.invested)) : '—';
+                const val = nfmt.format(Math.round(it.value));
+                let profitCell = '<span class="alloc-num">—</span>';
+                if (it.profit != null) {
+                    const up = it.profit >= 0;
+                    const arrow = up ? '▲' : '▼';
+                    const cls = up ? 'pf-pos' : 'pf-neg';
+                    profitCell = `<span class="${cls}">${arrow} ${nfmt.format(Math.round(Math.abs(it.profit)))}</span>`;
+                }
+                return `<tr data-i="${i}"><td><div class="alloc-name-cell"><span class="alloc-dot" style="background:${color}"></span>` +
+                    `<span class="alloc-name" title="${it.name}">${it.name}</span></div></td>` +
+                    `<td class="alloc-pctcell">${pct}%</td>` +
+                    `<td class="alloc-num">${inv}</td>` +
+                    `<td class="alloc-num">${val}</td>` +
+                    `<td class="alloc-profit">${profitCell}</td></tr>`;
+            }).join('');
+            more.style.display = items.length > ALLOC_TOP ? 'inline-block' : 'none';
+            if (items.length > ALLOC_TOP) more.innerText = _allocExpanded ? 'Свернуть' : `Показать все (${items.length})`;
+
+            _bindAllocHover(items, total, curSym);
+        }
+
+        function _bindAllocHover(items, total, curSym) {
+            const chart = document.querySelector('.alloc-chart');
+            const tip = document.getElementById('allocTooltip');
+            const paths = document.querySelectorAll('#allocChart .alloc-seg-path');
+            const rows = document.querySelectorAll('#allocLegend tr');
+            const hi = (idx, on) => {
+                paths.forEach(p => p.classList.toggle('dim', on && +p.dataset.i !== idx));
+                rows.forEach(r => r.classList.toggle('hl', on && +r.dataset.i === idx));
+            };
+            paths.forEach(p => {
+                const idx = +p.dataset.i;
+                p.addEventListener('mousemove', (e) => {
+                    const it = items[idx];
+                    const pct = (it.value / total * 100).toFixed(1);
+                    tip.style.display = 'block';
+                    tip.innerHTML = `<b>${it.name}</b> · ${pct}%<br>${nfmt.format(Math.round(it.value))} ${curSym}`;
+                    const rc = chart.getBoundingClientRect();
+                    tip.style.left = (e.clientX - rc.left) + 'px';
+                    tip.style.top = (e.clientY - rc.top) + 'px';
+                    hi(idx, true);
+                });
+                p.addEventListener('mouseleave', () => { tip.style.display = 'none'; hi(idx, false); });
+            });
         }
 
         async function uploadReport(fileObj) {
@@ -1651,8 +2029,9 @@
                 const result = await r.json();
                 if (r.ok) {
                     status.className = 'upload-status ok';
-                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Можно загрузить ещё отчёты за другие периоды. Обновляем…`;
+                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Обновляем…`;
                     await loadPortfolio(); // перезагрузка с живыми ценами MOEX
+                    setTimeout(closeAddModal, 900); // закрыть окно после успеха
                 } else {
                     status.className = 'upload-status err';
                     status.innerText = result.detail || 'Не удалось обработать отчёт.';

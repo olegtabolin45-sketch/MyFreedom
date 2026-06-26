@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit, metrics, quotes
+from app import audit, dividends, metrics, quotes, tbank
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -76,6 +76,33 @@ async def get_portfolio(token: str):
             }
             for r in cursor.fetchall()
         ]
+        # Средняя цена покупки по тикеру (для «вложено» и дохода позиции; приближённо)
+        buy_amt: dict[str, float] = {}
+        buy_qty: dict[str, float] = {}
+        for t in trades:
+            if t.get("is_fx") or "покуп" not in (t.get("side") or "").lower():
+                continue
+            tk = t.get("ticker") or ""
+            buy_amt[tk] = buy_amt.get(tk, 0.0) + (t.get("amount") or 0)
+            buy_qty[tk] = buy_qty.get(tk, 0.0) + (t.get("quantity") or 0)
+
+        # Категории (секторы) позиций — из T-Bank, если подключён
+        categories = {}
+        try:
+            categories = tbank.get_categories(positions) if tbank.is_enabled() else {}
+        except Exception as e:
+            logger.warning("Категории недоступны: %s", e)
+
+        for p in positions:
+            tk = p["ticker"]
+            p["category"] = categories.get(tk, "Прочее")
+            avg = (buy_amt[tk] / buy_qty[tk]) if buy_qty.get(tk) else None
+            p["invested"] = round(avg * p["quantity"], 2) if avg else None
+            if p.get("value") is not None and p["invested"] is not None:
+                p["pos_profit"] = round(p["value"] - p["invested"], 2)
+            else:
+                p["pos_profit"] = None
+
         cursor.execute(
             "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
             (email,),
@@ -88,24 +115,34 @@ async def get_portfolio(token: str):
             (email,),
         )
         cash_rows = cursor.fetchall()
-        fx = quotes.get_fx_rates() if cash_rows else {}
         cash = []
         cash_value = 0.0
+        # Учитываем только рублёвые остатки: валютные остатки в отчёте — это часто
+        # неисполненные/расчётные позиции (T+), их корректная оценка требует учёта
+        # сеттлмента. Иначе стоимость портфеля завышается (#snowball-mismatch).
         for currency, amount in cash_rows:
-            rate = fx.get(currency, 1.0 if currency == "RUB" else None)
-            value_rub = round(amount * rate, 2) if rate else None
+            value_rub = round(amount, 2) if currency == "RUB" else None
             if value_rub:
                 cash_value += value_rub
             cash.append({"currency": currency, "amount": amount, "value": value_rub})
 
-        # Прибыль/доходность считаем по бумагам; кэш показываем отдельно
-        tv = round(total_value, 2) if has_quotes else None
-        m = metrics.compute_metrics(trades, tv, cashflows)
-
         # Итоговая стоимость портфеля = бумаги + свободные средства
+        tv = round(total_value, 2) if has_quotes else None
         portfolio_total = None
         if has_quotes or cash_value:
             portfolio_total = round(total_value + cash_value, 2)
+
+        # Метрики по модели Snowball: вложено = пополнения−выводы, прибыль = стоимость−вложено
+        m = metrics.compute_metrics(trades, portfolio_total, cashflows)
+
+        # Пассивный доход (прогноз дивидендов/купонов на 12 мес) и доходность к активам
+        inc = dividends.annual_income(positions)
+        passive_income = inc["total"]
+        passive_yield = (
+            round(passive_income / total_value * 100, 2)
+            if has_quotes and total_value > 0 and passive_income
+            else None
+        )
         return {
             "has_data": bool(positions or trades),
             "positions": positions,
@@ -121,6 +158,10 @@ async def get_portfolio(token: str):
             "profit_pct": m["profit_pct"],
             "xirr": m["xirr"],
             "dividends": m["dividends"],
+            "commissions": m["commissions"],
+            "taxes": m["taxes"],
+            "passive_income": passive_income or None,
+            "passive_yield": passive_yield,
         }
     except HTTPException:
         raise
