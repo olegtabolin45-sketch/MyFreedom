@@ -1940,8 +1940,12 @@
         // ===== МУЛЬТИПОРТФЕЛИ =====
         let portfolios = [];          // [{id, name, description, currency, kind, broker_commission}]
         let activePortfolioId = null; // id портфеля или 'all' (Общий капитал)
+        const _pfCache = {};          // id/'all' -> { data, ts } — клиентский кэш данных портфеля
+        const _PF_TTL = 90 * 1000;    // фоновое обновление, если данные старше 90с
 
         async function loadPortfolios() {
+            // Данные могли измениться (импорт/создание) — сбрасываем кэш
+            Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const r = await fetch(API_BASE + '/api/portfolios?token=' + token);
@@ -1961,12 +1965,14 @@
             await loadPortfolio();
         }
 
-        async function _fetchSummary(pid) {
-            try {
-                const token = encodeURIComponent(getAccessToken());
-                const r = await fetch(API_BASE + '/api/portfolio?token=' + token + '&portfolio_id=' + pid);
-                return r.ok ? await r.json() : null;
-            } catch (e) { return null; }
+        // Запрос данных портфеля с записью в кэш
+        async function _fetchPortfolio(pid) {
+            const token = encodeURIComponent(getAccessToken());
+            const r = await fetch(API_BASE + '/api/portfolio?token=' + token + '&portfolio_id=' + pid);
+            if (!r.ok) return null;
+            const d = await r.json();
+            _pfCache[pid] = { data: d, ts: Date.now() };
+            return d;
         }
 
         function renderSwitcher() {
@@ -1987,7 +1993,7 @@
 
             box.innerHTML = cards.map(c => `
                 <div class="pf-switch-card ${c.total ? 'total' : ''} ${String(c.id) === String(activePortfolioId) ? 'active' : ''}"
-                     onclick="selectPortfolio('${c.id}')">
+                     data-pid="${c.id}" onclick="selectPortfolio('${c.id}')">
                     <div class="psc-tag">${c.total ? 'Все портфели' : 'Портфель'}</div>
                     <div class="psc-name">${c.name}</div>
                     <div class="psc-val" id="psc-val-${c.id}">…</div>
@@ -1995,26 +2001,34 @@
                 </div>
             `).join('') + newBtn;
 
-            // Подтягиваем значения карточек асинхронно
-            cards.forEach(async c => {
-                const d = await _fetchSummary(c.id);
-                const valEl = document.getElementById('psc-val-' + c.id);
-                const profEl = document.getElementById('psc-prof-' + c.id);
-                if (!valEl) return;
-                const headline = d && (d.portfolio_total != null ? d.portfolio_total : d.total_value);
-                const sym = CURRENCY_SYMBOLS[(d && d.value_currency) || 'RUB'] || '₽';
-                valEl.innerText = headline != null ? `${nfmt.format(Math.round(headline))} ${sym}` : `— ${sym}`;
-                if (profEl && d && d.profit != null) {
-                    const pos = d.profit >= 0;
-                    profEl.className = 'psc-profit ' + (pos ? 'pf-pos' : 'pf-neg');
-                    profEl.innerText = `${pos ? '+' : ''}${nfmt.format(Math.round(d.profit))} ${sym}`;
-                }
+            // Значения карточек: из кэша мгновенно, иначе один запрос (результат кэшируется)
+            cards.forEach(c => {
+                const cached = _pfCache[c.id];
+                if (cached) _paintCard(c.id, cached.data);
+                else _fetchPortfolio(c.id).then(d => d && _paintCard(c.id, d));
             });
+        }
+
+        function _paintCard(id, d) {
+            const valEl = document.getElementById('psc-val-' + id);
+            const profEl = document.getElementById('psc-prof-' + id);
+            if (!valEl) return;
+            const headline = d && (d.portfolio_total != null ? d.portfolio_total : d.total_value);
+            const sym = CURRENCY_SYMBOLS[(d && d.value_currency) || 'RUB'] || '₽';
+            valEl.innerText = headline != null ? `${nfmt.format(Math.round(headline))} ${sym}` : `— ${sym}`;
+            if (profEl && d && d.profit != null) {
+                const pos = d.profit >= 0;
+                profEl.className = 'psc-profit ' + (pos ? 'pf-pos' : 'pf-neg');
+                profEl.innerText = `${pos ? '+' : ''}${nfmt.format(Math.round(d.profit))} ${sym}`;
+            }
         }
 
         function selectPortfolio(id) {
             activePortfolioId = (id === 'all') ? 'all' : Number(id);
-            renderSwitcher();
+            // Мгновенно подсвечиваем карточку без перерисовки и перезапросов
+            document.querySelectorAll('#pfSwitch .pf-switch-card').forEach(el => {
+                el.classList.toggle('active', el.dataset.pid === String(activePortfolioId));
+            });
             loadPortfolio();
         }
 
@@ -2026,18 +2040,25 @@
             if (importRow) importRow.style.display = isReal ? 'flex' : 'none';
             if (reupload) reupload.style.display = isReal ? 'block' : 'none';
 
-            // Сбрасываем UI сразу при переключении, чтобы не мелькали данные прошлого портфеля
-            resetPortfolioMetrics();
-            if (!activePortfolioId) { renderPortfolio(null); return; }
+            if (!activePortfolioId) { resetPortfolioMetrics(); renderPortfolio(null); return; }
             const reqFor = activePortfolioId; // защита от гонки при быстром переключении
-            try {
-                const token = encodeURIComponent(getAccessToken());
-                const r = await fetch(API_BASE + '/api/portfolio?token=' + token + '&portfolio_id=' + reqFor);
-                if (String(reqFor) !== String(activePortfolioId)) return; // переключились — игнорируем
-                if (!r.ok) { renderPortfolio(null); return; }
-                const data = await r.json();
-                renderPortfolio(data);
-            } catch (e) { renderPortfolio(null); }
+            const cached = _pfCache[reqFor];
+
+            if (cached) {
+                renderPortfolio(cached.data); // мгновенно из кэша — без «микропрогрузки»
+            } else {
+                resetPortfolioMetrics();      // нет кэша — чистим и ждём ответ
+            }
+
+            // Первичная загрузка или фоновое обновление устаревшего кэша
+            if (!cached || Date.now() - cached.ts > _PF_TTL) {
+                try {
+                    const fresh = await _fetchPortfolio(reqFor);
+                    if (String(reqFor) !== String(activePortfolioId)) return; // успели переключиться
+                    renderPortfolio(fresh);
+                    if (fresh) _paintCard(reqFor, fresh);
+                } catch (e) { if (!cached) renderPortfolio(null); }
+            }
         }
 
         function resetPortfolioMetrics() {
