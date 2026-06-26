@@ -432,15 +432,33 @@
         .alloc-center .v { font-size: 30px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
         .alloc-center .c { font-size: 12px; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; }
         .alloc-side { min-width: 0; }
-        .alloc-legend { display: flex; flex-direction: column; gap: 6px; }
-        .alloc-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+        .alloc-seg-path { cursor: pointer; transition: opacity 0.15s ease; }
+        .alloc-seg-path.dim { opacity: 0.35; }
+        .alloc-tooltip { position: absolute; pointer-events: none; background: #1d1d1f; color: #fff; padding: 7px 11px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; transform: translate(-50%, -130%); z-index: 5; box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+        .alloc-tooltip b { font-weight: 600; }
+
+        /* Заголовок с переключателем */
+        .alloc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .alloc-toggle { display: inline-flex; background: #f0f0f2; border-radius: 10px; padding: 3px; }
+        .alloc-tg { border: none; background: none; padding: 7px 14px; font-size: 13px; font-weight: 500; color: #86868b; border-radius: 8px; cursor: pointer; transition: all 0.18s ease; }
+        .alloc-tg.active { background: #fff; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        /* Таблица-легенда */
+        .alloc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .alloc-table th { text-align: right; padding: 6px 8px; font-size: 11px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e5e5ea; }
+        .alloc-table th:first-child { text-align: left; }
+        .alloc-table td { padding: 8px; border-bottom: 1px solid #f5f5f7; font-variant-numeric: tabular-nums; }
+        .alloc-table tr:last-child td { border-bottom: none; }
+        .alloc-table tr.hl td { background: #fafafa; }
+        .alloc-name-cell { display: flex; align-items: center; gap: 8px; }
         .alloc-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-        .alloc-name { color: #1d1d1f; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .alloc-pct { color: #1d1d1f; font-weight: 600; font-variant-numeric: tabular-nums; }
-        .alloc-val { color: #86868b; font-variant-numeric: tabular-nums; min-width: 78px; text-align: right; }
+        .alloc-name { color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .alloc-num { text-align: right; color: #515154; }
+        .alloc-pctcell { text-align: right; font-weight: 600; color: #1d1d1f; }
+        .alloc-profit { text-align: right; font-weight: 600; white-space: nowrap; }
         .alloc-more { display: inline-block; margin-top: 10px; font-size: 13px; color: #5b6ef5; cursor: pointer; font-weight: 500; }
         .alloc-more:hover { text-decoration: underline; }
-        @media (max-width: 700px) { .alloc-body { grid-template-columns: 1fr; justify-items: center; } .alloc-chart svg { width: 240px; height: 240px; } }
+        @media (max-width: 860px) { .alloc-body { grid-template-columns: 1fr; } .alloc-chart svg { width: 240px; height: 240px; } }
 
         /* Кликабельная карточка стоимости + раскрывающаяся разбивка */
         .pf-card-clickable { cursor: pointer; position: relative; }
@@ -712,15 +730,27 @@
             <!-- Данные портфеля (после загрузки) -->
             <div id="pfData" style="display: none;">
                 <div class="dash-card alloc-card">
-                    <div class="dash-card-title">Распределение портфеля</div>
-                    <div class="dash-card-hint">Доли активов и свободных средств в текущей стоимости</div>
+                    <div class="alloc-header">
+                        <div>
+                            <div class="dash-card-title">Распределение портфеля</div>
+                            <div class="dash-card-hint">Доли в текущей стоимости</div>
+                        </div>
+                        <div class="alloc-toggle">
+                            <button class="alloc-tg active" id="allocTgAssets" onclick="setAllocMode('assets')">По активам</button>
+                            <button class="alloc-tg" id="allocTgCats" onclick="setAllocMode('categories')">По категориям</button>
+                        </div>
+                    </div>
                     <div class="alloc-body">
                         <div class="alloc-chart">
-                            <svg id="allocChart" viewBox="0 0 120 120"></svg>
+                            <svg id="allocChart" viewBox="0 0 200 200"></svg>
                             <div class="alloc-center"><div class="v" id="allocTotal">—</div><div class="c">всего</div></div>
+                            <div class="alloc-tooltip" id="allocTooltip" style="display:none;"></div>
                         </div>
                         <div class="alloc-side">
-                            <div class="alloc-legend" id="allocLegend"></div>
+                            <table class="alloc-table">
+                                <thead><tr><th>Название</th><th class="num">Доля</th><th class="num">Вложено</th><th class="num">Стоимость</th><th class="num">Доход</th></tr></thead>
+                                <tbody id="allocLegend"></tbody>
+                            </table>
                             <a class="alloc-more" id="allocMore" style="display: none;" onclick="toggleAllocMore()">Показать все</a>
                         </div>
                     </div>
@@ -1663,7 +1693,7 @@
         let _allocExpanded = false;
         function toggleAllocMore() {
             _allocExpanded = !_allocExpanded;
-            if (window._allocItems) renderAllocLegend(window._allocItems, window._allocDenom, window._allocSym);
+            renderAllocView();
         }
 
         // Применяет режим: до утверждения — предпросмотр цели с баннером; после — вкладки
@@ -1841,66 +1871,150 @@
         const ALLOC_COLORS = ['#5b6ef5', '#24b24b', '#ff9f0a', '#2b6fd6', '#8a4fe0', '#ff5a4d',
                               '#00b3a4', '#e0508a', '#7a8b99', '#c9a227', '#3aa0ff', '#9b59b6'];
 
+        const ALLOC_TOP = 10;
+        let _allocMode = 'assets';
+        let _allocRaw = [];   // сырые позиции {name, value, invested, profit, category}
+        let _allocSym = '₽';
+
         function renderAllocation(data, denom, curSym) {
-            _allocExpanded = false;  // при обновлении портфеля сворачиваем легенду
+            _allocExpanded = false;
+            _allocSym = curSym;
+            _allocRaw = [];
+            (data.positions || []).forEach(p => {
+                if (p.value) _allocRaw.push({
+                    name: p.name || p.ticker, value: p.value,
+                    invested: p.invested, profit: p.pos_profit, category: p.category || 'Прочее',
+                });
+            });
+            (data.cash || []).forEach(c => {
+                if (c.value) _allocRaw.push({
+                    name: 'Свободные средства (' + c.currency + ')', value: c.value,
+                    invested: c.value, profit: 0, category: 'Валюта',
+                });
+            });
+            renderAllocView();
+        }
+
+        function setAllocMode(mode) {
+            _allocMode = mode; _allocExpanded = false;
+            document.getElementById('allocTgAssets').classList.toggle('active', mode === 'assets');
+            document.getElementById('allocTgCats').classList.toggle('active', mode === 'categories');
+            renderAllocView();
+        }
+
+        // Кольцевой сегмент (annular sector)
+        function _arcPath(cx, cy, rO, rI, a0, a1) {
+            const pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+            const large = (a1 - a0) > Math.PI ? 1 : 0;
+            const [x0, y0] = pt(rO, a0), [x1, y1] = pt(rO, a1), [x2, y2] = pt(rI, a1), [x3, y3] = pt(rI, a0);
+            return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${rO} ${rO} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} ` +
+                   `L${x2.toFixed(2)} ${y2.toFixed(2)} A${rI} ${rI} 0 ${large} 0 ${x3.toFixed(2)} ${y3.toFixed(2)} Z`;
+        }
+
+        function renderAllocView() {
             const svg = document.getElementById('allocChart');
             const legend = document.getElementById('allocLegend');
-            // Собираем доли: бумаги с ценой + свободные средства
-            const items = [];
-            (data.positions || []).forEach(p => { if (p.value) items.push({ name: p.name || p.ticker, value: p.value }); });
-            (data.cash || []).forEach(c => { if (c.value) items.push({ name: 'Свободные средства (' + c.currency + ')', value: c.value }); });
+            const more = document.getElementById('allocMore');
+            const curSym = _allocSym;
+
+            // Группировка
+            let items;
+            if (_allocMode === 'categories') {
+                const m = {};
+                _allocRaw.forEach(it => {
+                    const g = m[it.category] || (m[it.category] = { name: it.category, value: 0, invested: 0, hasInv: false });
+                    g.value += it.value;
+                    if (it.invested != null) { g.invested += it.invested; g.hasInv = true; }
+                });
+                items = Object.values(m).map(g => ({
+                    name: g.name, value: g.value,
+                    invested: g.hasInv ? g.invested : null,
+                    profit: g.hasInv ? g.value - g.invested : null,
+                }));
+            } else {
+                items = _allocRaw.slice();
+            }
             items.sort((a, b) => b.value - a.value);
             const total = items.reduce((s, i) => s + i.value, 0);
 
             if (!total) {
                 svg.innerHTML = '';
-                legend.innerHTML = '<div class="alloc-item"><span class="alloc-name">Нет данных с ценами для диаграммы</span></div>';
+                legend.innerHTML = '<tr><td colspan="5">Нет данных с ценами для диаграммы</td></tr>';
                 document.getElementById('allocTotal').innerText = '—';
+                more.style.display = 'none';
                 return;
             }
-
             document.getElementById('allocTotal').innerText = nfmt.format(Math.round(total / 1000)) + 'k ' + curSym;
 
-            // Кольцо: r=42, окружность ~263.9; сегменты через stroke-dasharray
-            const r = 42, C = 2 * Math.PI * r;
-            let offset = 0;
-            let segs = '';
-            items.forEach((it, i) => {
+            // Дуги диаграммы (каждая — отдельная, наводимая)
+            const cx = 100, cy = 100, rO = 95, rI = 62;
+            let a = -Math.PI / 2;
+            svg.innerHTML = items.map((it, i) => {
                 const frac = it.value / total;
+                const a1 = a + frac * 2 * Math.PI;
                 const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
-                const len = frac * C;
-                segs += `<circle class="alloc-seg" cx="60" cy="60" r="${r}" fill="none" stroke="${color}" ` +
-                    `stroke-width="16" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" ` +
-                    `stroke-dashoffset="${(-offset).toFixed(2)}"/>`;
-                offset += len;
-            });
-            svg.innerHTML = segs;
+                let d;
+                if (frac >= 0.9999) {
+                    d = `M${cx} ${cy - rO} A${rO} ${rO} 0 1 1 ${cx - 0.01} ${cy - rO} M${cx} ${cy - rI} A${rI} ${rI} 0 1 0 ${cx - 0.01} ${cy - rI}`;
+                } else {
+                    d = _arcPath(cx, cy, rO, rI, a, a1);
+                }
+                const path = `<path class="alloc-seg-path" data-i="${i}" d="${d}" fill="${color}" fill-rule="evenodd"/>`;
+                a = a1;
+                return path;
+            }).join('');
 
-            // Легенда: топ-10, остальное по «Показать все»
-            window._allocItems = items; window._allocDenom = total; window._allocSym = curSym;
-            renderAllocLegend(items, total, curSym);
-        }
-
-        const ALLOC_TOP = 10;
-        function renderAllocLegend(items, total, curSym) {
-            const legend = document.getElementById('allocLegend');
-            const more = document.getElementById('allocMore');
+            // Легенда-таблица (топ-10 + раскрытие)
             const shown = _allocExpanded ? items : items.slice(0, ALLOC_TOP);
             legend.innerHTML = shown.map((it) => {
                 const i = items.indexOf(it);
                 const color = ALLOC_COLORS[i % ALLOC_COLORS.length];
                 const pct = (it.value / total * 100).toFixed(1);
-                return `<div class="alloc-item"><span class="alloc-dot" style="background:${color}"></span>` +
-                    `<span class="alloc-name">${it.name}</span>` +
-                    `<span class="alloc-pct">${pct}%</span>` +
-                    `<span class="alloc-val">${nfmt.format(Math.round(it.value))} ${curSym}</span></div>`;
+                const inv = it.invested != null ? nfmt.format(Math.round(it.invested)) : '—';
+                const val = nfmt.format(Math.round(it.value));
+                let profitCell = '<span class="alloc-num">—</span>';
+                if (it.profit != null) {
+                    const up = it.profit >= 0;
+                    const arrow = up ? '▲' : '▼';
+                    const cls = up ? 'pf-pos' : 'pf-neg';
+                    profitCell = `<span class="${cls}">${arrow} ${nfmt.format(Math.round(Math.abs(it.profit)))}</span>`;
+                }
+                return `<tr data-i="${i}"><td><div class="alloc-name-cell"><span class="alloc-dot" style="background:${color}"></span>` +
+                    `<span class="alloc-name" title="${it.name}">${it.name}</span></div></td>` +
+                    `<td class="alloc-pctcell">${pct}%</td>` +
+                    `<td class="alloc-num">${inv}</td>` +
+                    `<td class="alloc-num">${val}</td>` +
+                    `<td class="alloc-profit">${profitCell}</td></tr>`;
             }).join('');
-            if (items.length > ALLOC_TOP) {
-                more.style.display = 'inline-block';
-                more.innerText = _allocExpanded ? 'Свернуть' : `Показать все (${items.length})`;
-            } else {
-                more.style.display = 'none';
-            }
+            more.style.display = items.length > ALLOC_TOP ? 'inline-block' : 'none';
+            if (items.length > ALLOC_TOP) more.innerText = _allocExpanded ? 'Свернуть' : `Показать все (${items.length})`;
+
+            _bindAllocHover(items, total, curSym);
+        }
+
+        function _bindAllocHover(items, total, curSym) {
+            const chart = document.querySelector('.alloc-chart');
+            const tip = document.getElementById('allocTooltip');
+            const paths = document.querySelectorAll('#allocChart .alloc-seg-path');
+            const rows = document.querySelectorAll('#allocLegend tr');
+            const hi = (idx, on) => {
+                paths.forEach(p => p.classList.toggle('dim', on && +p.dataset.i !== idx));
+                rows.forEach(r => r.classList.toggle('hl', on && +r.dataset.i === idx));
+            };
+            paths.forEach(p => {
+                const idx = +p.dataset.i;
+                p.addEventListener('mousemove', (e) => {
+                    const it = items[idx];
+                    const pct = (it.value / total * 100).toFixed(1);
+                    tip.style.display = 'block';
+                    tip.innerHTML = `<b>${it.name}</b> · ${pct}%<br>${nfmt.format(Math.round(it.value))} ${curSym}`;
+                    const rc = chart.getBoundingClientRect();
+                    tip.style.left = (e.clientX - rc.left) + 'px';
+                    tip.style.top = (e.clientY - rc.top) + 'px';
+                    hi(idx, true);
+                });
+                p.addEventListener('mouseleave', () => { tip.style.display = 'none'; hi(idx, false); });
+            });
         }
 
         async function uploadReport(fileObj) {

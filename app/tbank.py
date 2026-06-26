@@ -90,6 +90,64 @@ def _annual_coupon(uid: str) -> float:
     return sum(_money(x.get("payOneBond")) for x in d.get("events", []))
 
 
+# Сектора T-Bank → русские категории
+_SECTOR_RU = {
+    "financial": "Финансы",
+    "energy": "Энергетика",
+    "materials": "Материалы",
+    "utilities": "Коммунальные",
+    "telecom": "Телеком",
+    "it": "IT",
+    "consumer": "Потребительский",
+    "industrials": "Промышленность",
+    "health_care": "Здравоохранение",
+    "real_estate": "Недвижимость",
+    "transport": "Транспорт",
+    "green_energy": "Энергетика",
+    "electrocars": "Транспорт",
+    "ecomaterials": "Материалы",
+    "metals": "Материалы",
+    "other": "Прочее",
+}
+_cat_cache: dict[str, tuple[str, float]] = {}  # ticker -> (category, ts)
+
+
+def _share_sector(uid: str) -> str | None:
+    d = _post("ShareBy", {"idType": "INSTRUMENT_ID_TYPE_UID", "id": uid})
+    if not d:
+        return None
+    return (d.get("instrument", {}) or {}).get("sector")
+
+
+def get_categories(positions: list[dict]) -> dict[str, str]:
+    """Тикер → категория (сектор для акций; Облигации/Фонды для прочего)."""
+    out = {}
+    now = time.time()
+    for p in positions:
+        ticker = p.get("ticker") or ""
+        if not ticker:
+            continue
+        c = _cat_cache.get(ticker)
+        if c and now - c[1] < _CACHE_TTL:
+            out[ticker] = c[0]
+            continue
+        cat = "Прочее"
+        try:
+            uid, kind = _resolve(ticker)
+            if kind == "bond":
+                cat = "Облигации"
+            elif kind == "etf":
+                cat = "Фонды"
+            elif uid:
+                sec = _share_sector(uid)
+                cat = _SECTOR_RU.get((sec or "").lower(), "Акции")
+        except Exception as e:
+            logger.warning("T-Bank: сектор по %s: %s", ticker, e)
+        _cat_cache[ticker] = (cat, now)
+        out[ticker] = cat
+    return out
+
+
 def annual_income(positions: list[dict]) -> dict:
     """Прогноз годового пассивного дохода (₽) по позициям через T-Bank API."""
     total = 0.0

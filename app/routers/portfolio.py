@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 
-from app import audit, dividends, metrics, quotes
+from app import audit, dividends, metrics, quotes, tbank
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -76,6 +76,33 @@ async def get_portfolio(token: str):
             }
             for r in cursor.fetchall()
         ]
+        # Средняя цена покупки по тикеру (для «вложено» и дохода позиции; приближённо)
+        buy_amt: dict[str, float] = {}
+        buy_qty: dict[str, float] = {}
+        for t in trades:
+            if t.get("is_fx") or "покуп" not in (t.get("side") or "").lower():
+                continue
+            tk = t.get("ticker") or ""
+            buy_amt[tk] = buy_amt.get(tk, 0.0) + (t.get("amount") or 0)
+            buy_qty[tk] = buy_qty.get(tk, 0.0) + (t.get("quantity") or 0)
+
+        # Категории (секторы) позиций — из T-Bank, если подключён
+        categories = {}
+        try:
+            categories = tbank.get_categories(positions) if tbank.is_enabled() else {}
+        except Exception as e:
+            logger.warning("Категории недоступны: %s", e)
+
+        for p in positions:
+            tk = p["ticker"]
+            p["category"] = categories.get(tk, "Прочее")
+            avg = (buy_amt[tk] / buy_qty[tk]) if buy_qty.get(tk) else None
+            p["invested"] = round(avg * p["quantity"], 2) if avg else None
+            if p.get("value") is not None and p["invested"] is not None:
+                p["pos_profit"] = round(p["value"] - p["invested"], 2)
+            else:
+                p["pos_profit"] = None
+
         cursor.execute(
             "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s",
             (email,),
