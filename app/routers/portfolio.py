@@ -4,7 +4,7 @@
 portfolio_id=all агрегирует все портфели пользователя («Общий капитал»).
 """
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from app import audit, dividends, metrics, quotes, tbank
 from app.broker_import import parse_broker_report
@@ -16,6 +16,9 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 # Лимит размера загружаемого файла (5 МБ)
 MAX_FILE_BYTES = 5 * 1024 * 1024
+
+# Singleton для зависимости загрузки файлов (ruff B008: не вызывать File() в дефолтах)
+_FILES = File(...)
 
 
 def _scope(portfolio_id: str):
@@ -184,33 +187,182 @@ async def get_portfolio(token: str, portfolio_id: str = "all"):
             conn.close()
 
 
-@router.post("/import")
-async def import_report(token: str, portfolio_id: int, request: Request, file: UploadFile):
-    """Загрузка брокерского отчёта Т-Банка (.xlsx) в конкретный портфель."""
+def _norm_date(d: str) -> str:
+    """DD.MM.YYYY или YYYY-MM-DD → сравнимый YYYY-MM-DD (или '')."""
+    d = (d or "").strip()
+    if len(d) >= 10 and d[4:5] == "-":
+        return d[:10]
+    parts = d.split(".")
+    if len(parts) == 3 and len(parts[2]) >= 4:
+        return f"{parts[2][:4]}-{parts[1]}-{parts[0]}"
+    return ""
+
+
+def _fmt_date(norm: str) -> str:
+    """YYYY-MM-DD → DD.MM.YYYY для отображения."""
+    if not norm:
+        return ""
+    y, m, d = norm.split("-")
+    return f"{d}.{m}.{y}"
+
+
+async def _read_files(files: list[UploadFile]) -> list[bytes]:
+    """Читает и валидирует список .xlsx-файлов."""
+    if not files:
+        raise HTTPException(status_code=400, detail="Не выбрано ни одного файла.")
+    contents = []
+    for f in files:
+        if not (f.filename or "").lower().endswith(".xlsx"):
+            raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx.")
+        content = await f.read()
+        if len(content) > MAX_FILE_BYTES:
+            raise HTTPException(status_code=400, detail="Файл слишком большой (максимум 5 МБ).")
+        contents.append(content)
+    return contents
+
+
+def _parse_many(contents: list[bytes]) -> dict:
+    """Парсит несколько отчётов и объединяет: сделки/потоки накапливаются,
+    позиции и кэш берутся из самого свежего отчёта."""
+    all_trades: list[dict] = []
+    all_cashflows: list[dict] = []
+    best = None  # самый свежий отчёт с позициями
+    for content in contents:
+        try:
+            parsed = parse_broker_report(content)
+        except Exception as e:
+            logger.warning("Не удалось разобрать отчёт: %s", e)
+            raise HTTPException(
+                status_code=400,
+                detail="Не удалось распознать отчёт. Убедитесь, что это xlsx-отчёт Т-Банка.",
+            ) from e
+        all_trades.extend(parsed["trades"])
+        all_cashflows.extend(parsed.get("cashflows", []))
+        rd = parsed.get("report_date", "")
+        if parsed["positions"] and (best is None or rd >= best["report_date"]):
+            best = {
+                "report_date": rd,
+                "positions": parsed["positions"],
+                "cash": parsed.get("cash", {}),
+            }
+    return {
+        "trades": all_trades,
+        "cashflows": all_cashflows,
+        "positions": best["positions"] if best else [],
+        "cash": best["cash"] if best else {},
+        "report_date": best["report_date"] if best else "",
+    }
+
+
+def _summarize(cursor, email: str, portfolio_id: int, parsed: dict) -> dict:
+    """Считает, что нового добавится (без записи в БД), период и предупреждения."""
+    cursor.execute(
+        "SELECT trade_date, trade_time, ticker, side, quantity, amount "
+        "FROM portfolio_trades WHERE email = %s AND portfolio_id = %s",
+        (email, portfolio_id),
+    )
+    seen_t = {tuple(r) for r in cursor.fetchall()}
+    db_tickers = {r[2] for r in seen_t}
+    new_trades = 0
+    parsed_tickers = set()
+    for t in parsed["trades"]:
+        if not t.get("is_fx"):
+            parsed_tickers.add(t["ticker"])
+        key = (t["date"], t["time"], t["ticker"], t["side"], t["quantity"], t["amount"])
+        if key in seen_t:
+            continue
+        seen_t.add(key)
+        new_trades += 1
+
+    cursor.execute(
+        "SELECT flow_date, kind, amount FROM portfolio_cashflows "
+        "WHERE email = %s AND portfolio_id = %s",
+        (email, portfolio_id),
+    )
+    seen_cf = {tuple(r) for r in cursor.fetchall()}
+    new_div = new_comm = 0
+    for cf in parsed["cashflows"]:
+        key = (cf["date"], cf["kind"], cf["amount"])
+        if key in seen_cf:
+            continue
+        seen_cf.add(key)
+        if cf["kind"] == "dividend":
+            new_div += 1
+        elif cf["kind"] == "commission":
+            new_comm += 1
+
+    # Предупреждение: позиции без единой сделки (нужны отчёты за прошлые периоды)
+    all_tickers = parsed_tickers | db_tickers
+    orphans = [p["ticker"] for p in parsed["positions"] if p["ticker"] not in all_tickers]
+    warnings = []
+    if orphans:
+        warnings.append(
+            "По некоторым позициям не найдено ни одной покупки или продажи: "
+            + ", ".join(orphans)
+            + ". Возможно, нужно загрузить отчёты за предыдущие периоды."
+        )
+
+    dates = [_norm_date(t["date"]) for t in parsed["trades"]]
+    dates += [_norm_date(cf["date"]) for cf in parsed["cashflows"]]
+    dates = [d for d in dates if d]
+    period = None
+    if dates:
+        period = {"from": _fmt_date(min(dates)), "to": _fmt_date(max(dates))}
+
+    return {
+        "assets": len(parsed["positions"]),
+        "new_trades": new_trades,
+        "new_dividends": new_div,
+        "new_commissions": new_comm,
+        "period": period,
+        "warnings": warnings,
+        "report_date": parsed["report_date"],
+    }
+
+
+@router.post("/import/preview")
+async def import_preview(token: str, portfolio_id: int, files: list[UploadFile] = _FILES):
+    """Разбирает отчёты и возвращает сводку (без записи) — для подтверждения."""
     email = decode_access_token(token)
+    contents = await _read_files(files)
+    parsed = _parse_many(contents)
+    if not parsed["positions"] and not parsed["trades"]:
+        raise HTTPException(status_code=400, detail="В отчётах не найдено позиций или сделок.")
 
-    if not (file.filename or "").lower().endswith(".xlsx"):
-        raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx.")
-
-    content = await file.read()
-    if len(content) > MAX_FILE_BYTES:
-        raise HTTPException(status_code=400, detail="Файл слишком большой (максимум 5 МБ).")
-
+    conn = None
     try:
-        parsed = parse_broker_report(content)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM portfolios WHERE id = %s AND email = %s", (portfolio_id, email)
+        )
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Портфель не найден.")
+        return _summarize(cursor, email, portfolio_id, parsed)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning("Не удалось разобрать отчёт: %s", e)
-        raise HTTPException(
-            status_code=400,
-            detail="Не удалось распознать отчёт. Убедитесь, что это xlsx-отчёт Т-Банка.",
-        ) from e
+        logger.error("Ошибка предпросмотра импорта: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка обработки отчёта.") from e
+    finally:
+        if conn is not None:
+            conn.close()
 
+
+@router.post("/import")
+async def import_report(
+    token: str, portfolio_id: int, request: Request, files: list[UploadFile] = _FILES
+):
+    """Загрузка одного или нескольких отчётов Т-Банка (.xlsx) в портфель."""
+    email = decode_access_token(token)
+    contents = await _read_files(files)
+    parsed = _parse_many(contents)
     positions = parsed["positions"]
     trades = parsed["trades"]
-    cashflows = parsed.get("cashflows", [])
-    report_date = parsed.get("report_date", "")
+    cashflows = parsed["cashflows"]
+    report_date = parsed["report_date"]
     if not positions and not trades:
-        raise HTTPException(status_code=400, detail="В отчёте не найдено позиций или сделок.")
+        raise HTTPException(status_code=400, detail="В отчётах не найдено позиций или сделок.")
 
     conn = None
     try:
@@ -226,6 +378,9 @@ async def import_report(token: str, portfolio_id: int, request: Request, file: U
             raise HTTPException(status_code=404, detail="Портфель не найден.")
         prev_asof = meta[0]
 
+        # Сводка считается до записи (после неё «новых» уже не будет)
+        summary = _summarize(cursor, email, portfolio_id, parsed)
+
         # --- Сделки: накапливаем в этом портфеле, дедуп ---
         cursor.execute(
             "SELECT trade_date, trade_time, ticker, side, quantity, amount "
@@ -233,13 +388,11 @@ async def import_report(token: str, portfolio_id: int, request: Request, file: U
             (email, portfolio_id),
         )
         existing_trades = {tuple(r) for r in cursor.fetchall()}
-        new_trades = 0
         for t in trades:
             key = (t["date"], t["time"], t["ticker"], t["side"], t["quantity"], t["amount"])
             if key in existing_trades:
                 continue
             existing_trades.add(key)
-            new_trades += 1
             cursor.execute(
                 "INSERT INTO portfolio_trades "
                 "(email, portfolio_id, trade_date, trade_time, side, ticker, name, price, "
@@ -297,7 +450,7 @@ async def import_report(token: str, portfolio_id: int, request: Request, file: U
                 "DELETE FROM portfolio_cash WHERE email = %s AND portfolio_id = %s",
                 (email, portfolio_id),
             )
-            for currency, amount in parsed.get("cash", {}).items():
+            for currency, amount in parsed["cash"].items():
                 cursor.execute(
                     "INSERT INTO portfolio_cash (email, portfolio_id, currency, amount) "
                     "VALUES (%s, %s, %s, %s)",
@@ -313,9 +466,10 @@ async def import_report(token: str, portfolio_id: int, request: Request, file: U
             request,
             audit.PORTFOLIO_IMPORT,
             email=email,
-            detail=f"portfolio={portfolio_id} new_trades={new_trades}",
+            detail=f"pf={portfolio_id} files={len(contents)} new={summary['new_trades']}",
         )
-        return {"status": "success", "new_trades": new_trades, "report_date": report_date}
+        summary["status"] = "success"
+        return summary
     except HTTPException:
         raise
     except Exception as e:

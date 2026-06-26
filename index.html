@@ -566,6 +566,31 @@
         .npf-submit:hover { background: #000; }
         .npf-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
+        /* Плашка предпросмотра импорта */
+        .imp-preview { margin-top: 18px; border: 1.5px solid #e5e5ea; border-radius: 16px; padding: 18px; background: #fafafa; }
+        .imp-preview.warn { border-color: #ffd9a8; background: #fff8ef; }
+        .imp-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+        .imp-ico { font-size: 18px; }
+        .imp-title { font-size: 15px; font-weight: 700; color: #1d1d1f; }
+        .imp-files { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+        .imp-file { font-size: 12.5px; color: #515154; display: flex; align-items: center; gap: 6px; }
+        .imp-file::before { content: "📄"; font-size: 12px; }
+        .imp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .imp-chip { display: flex; align-items: center; gap: 7px; padding: 8px 13px; background: #fff; border: 1px solid #e5e5ea; border-radius: 11px; font-size: 13px; color: #515154; }
+        .imp-chip b { font-size: 15px; font-weight: 700; color: #1d1d1f; }
+        .imp-chip.add b { color: #24b24b; }
+        .imp-period { font-size: 12.5px; color: #86868b; margin-bottom: 12px; }
+        .imp-period b { color: #1d1d1f; font-weight: 600; }
+        .imp-warnings { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
+        .imp-warnings li { font-size: 12.5px; line-height: 1.5; color: #8a5a00; background: #fff3e0; border-radius: 10px; padding: 10px 12px; }
+        .imp-actions { display: flex; gap: 10px; }
+        .imp-back { flex: 0 0 auto; padding: 0 18px; height: 46px; background: #fff; border: 1.5px solid #e5e5ea; border-radius: 12px; font-size: 14px; font-weight: 500; color: #515154; cursor: pointer; transition: all 0.18s ease; }
+        .imp-back:hover { border-color: #c7c7cc; }
+        .imp-confirm { flex: 1; height: 46px; background: #1d1d1f; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .imp-confirm:hover { background: #000; }
+        .imp-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
+        .method-card.dragover { border-color: #1d1d1f; background: #f0f0f2; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -1004,10 +1029,10 @@
             </div>
 
             <div class="method-title">Способ для Т-Банка</div>
-            <div class="method-list">
-                <button class="method-card" onclick="document.getElementById('reportFile').click()">
+            <div class="method-list" id="importMethods">
+                <button class="method-card" id="uploadZone" onclick="document.getElementById('reportFile').click()">
                     <span class="method-icon">📄</span>
-                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Брокерский отчёт «о сделках и операциях» за период</span></span>
+                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Можно выбрать сразу несколько файлов за разные периоды</span></span>
                 </button>
                 <button class="method-card disabled" onclick="alert('Подключение по API — добавим на следующем этапе.')">
                     <span class="method-icon">🔌</span>
@@ -1015,9 +1040,26 @@
                 </button>
             </div>
 
-            <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
+            <input type="file" id="reportFile" accept=".xlsx" multiple style="display: none;">
             <div class="upload-status" id="uploadStatus" style="display: none;"></div>
-            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Можно загрузить несколько отчётов за разные периоды — данные накапливаются.</div>
+
+            <!-- Плашка предпросмотра: что будет добавлено (подтверждение перед записью) -->
+            <div class="imp-preview" id="importPreview" style="display: none;">
+                <div class="imp-head" id="impHead">
+                    <span class="imp-ico">✅</span>
+                    <span class="imp-title" id="impTitle">Готово к импорту</span>
+                </div>
+                <div class="imp-files" id="impFiles"></div>
+                <div class="imp-chips" id="impChips"></div>
+                <div class="imp-period" id="impPeriod"></div>
+                <ul class="imp-warnings" id="impWarnings"></ul>
+                <div class="imp-actions">
+                    <button class="imp-back" onclick="resetImport()">Выбрать другие файлы</button>
+                    <button class="imp-confirm" id="impConfirm" onclick="commitImport()">Подтвердить и добавить</button>
+                </div>
+            </div>
+
+            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Несколько отчётов за разные периоды можно загрузить разом — данные накапливаются.</div>
         </div>
     </div>
 
@@ -2279,28 +2321,42 @@
             });
         }
 
-        async function uploadReport(fileObj) {
+        // Файлы, ожидающие подтверждения
+        let _pendingFiles = [];
+
+        // Сбрасывает модалку импорта к выбору файлов
+        function resetImport() {
+            _pendingFiles = [];
+            document.getElementById('importPreview').style.display = 'none';
+            document.getElementById('importMethods').style.display = 'flex';
+            const st = document.getElementById('uploadStatus'); st.style.display = 'none';
+            const inp = document.getElementById('reportFile'); if (inp) inp.value = '';
+        }
+
+        // Шаг 1: разбор файлов и показ плашки подтверждения (без записи)
+        async function previewReport(fileList) {
+            const files = Array.from(fileList || []);
+            if (!files.length) return;
             const status = document.getElementById('uploadStatus');
+            if (!activePortfolioId || activePortfolioId === 'all') {
+                status.style.display = 'block'; status.className = 'upload-status err';
+                status.innerText = 'Сначала выберите конкретный портфель.'; return;
+            }
+            _pendingFiles = files;
             status.style.display = 'block'; status.className = 'upload-status';
-            status.innerText = 'Загрузка и обработка отчёта…';
+            status.innerText = `Разбираем ${files.length === 1 ? 'отчёт' : files.length + ' отчёта(ов)'}…`;
             try {
                 const token = encodeURIComponent(getAccessToken());
-                if (!activePortfolioId || activePortfolioId === 'all') {
-                    status.className = 'upload-status err';
-                    status.innerText = 'Сначала выберите конкретный портфель.'; return;
-                }
                 const fd = new FormData();
-                fd.append('file', fileObj);
-                const r = await fetch(API_BASE + '/api/portfolio/import?token=' + token + '&portfolio_id=' + activePortfolioId, { method: 'POST', body: fd });
+                files.forEach(f => fd.append('files', f));
+                const r = await fetch(API_BASE + '/api/portfolio/import/preview?token=' + token + '&portfolio_id=' + activePortfolioId, { method: 'POST', body: fd });
                 const result = await r.json();
                 if (r.ok) {
-                    status.className = 'upload-status ok';
-                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Обновляем…`;
-                    await loadPortfolios(); // обновляем карточки + данные с живыми ценами MOEX
-                    setTimeout(closeAddModal, 900); // закрыть окно после успеха
+                    status.style.display = 'none';
+                    renderImportPreview(result, files);
                 } else {
                     status.className = 'upload-status err';
-                    status.innerText = result.detail || 'Не удалось обработать отчёт.';
+                    status.innerText = (result.detail && (result.detail[0]?.msg || result.detail)) || 'Не удалось обработать отчёт.';
                 }
             } catch (e) {
                 status.className = 'upload-status err';
@@ -2308,11 +2364,71 @@
             }
         }
 
+        function renderImportPreview(s, files) {
+            document.getElementById('importMethods').style.display = 'none';
+            const box = document.getElementById('importPreview');
+            const hasWarn = (s.warnings || []).length > 0;
+            box.classList.toggle('warn', hasWarn);
+            document.getElementById('impHead').querySelector('.imp-ico').innerText = hasWarn ? '⚠️' : '✅';
+            document.getElementById('impTitle').innerText = hasWarn
+                ? 'Можно импортировать, но обратите внимание'
+                : 'Готово к импорту';
+
+            document.getElementById('impFiles').innerHTML = files
+                .map(f => `<div class="imp-file">${f.name}</div>`).join('');
+
+            const chip = (label, val, add) =>
+                `<div class="imp-chip ${add ? 'add' : ''}"><span>${label}</span><b>${add && val > 0 ? '+' : ''}${val}</b></div>`;
+            document.getElementById('impChips').innerHTML =
+                chip('Активы', s.assets, false) +
+                chip('Сделки', s.new_trades, true) +
+                chip('Начисления', s.new_dividends, true) +
+                chip('Комиссии', s.new_commissions, true);
+
+            document.getElementById('impPeriod').innerHTML = s.period
+                ? `Период отчёта: <b>${s.period.from}</b> — <b>${s.period.to}</b>`
+                : '';
+
+            document.getElementById('impWarnings').innerHTML =
+                (s.warnings || []).map(w => `<li>${w}</li>`).join('');
+
+            box.style.display = 'block';
+        }
+
+        // Шаг 2: подтверждение — реальная запись в портфель
+        async function commitImport() {
+            if (!_pendingFiles.length) return;
+            const btn = document.getElementById('impConfirm');
+            btn.disabled = true; btn.innerText = 'Добавляем…';
+            const status = document.getElementById('uploadStatus');
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const fd = new FormData();
+                _pendingFiles.forEach(f => fd.append('files', f));
+                const r = await fetch(API_BASE + '/api/portfolio/import?token=' + token + '&portfolio_id=' + activePortfolioId, { method: 'POST', body: fd });
+                const result = await r.json();
+                if (r.ok) {
+                    status.style.display = 'block'; status.className = 'upload-status ok';
+                    status.innerText = `Импортировано: +${result.new_trades} сделок. Обновляем…`;
+                    await loadPortfolios();
+                    setTimeout(() => { closeAddModal(); resetImport(); }, 900);
+                } else {
+                    status.style.display = 'block'; status.className = 'upload-status err';
+                    status.innerText = result.detail || 'Не удалось импортировать.';
+                }
+            } catch (e) {
+                status.style.display = 'block'; status.className = 'upload-status err';
+                status.innerText = 'Не удалось связаться с сервером.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Подтвердить и добавить';
+            }
+        }
+
         (function initUpload() {
             const input = document.getElementById('reportFile');
             const zone = document.getElementById('uploadZone');
             if (!input || !zone) return;
-            input.addEventListener('change', () => { if (input.files[0]) uploadReport(input.files[0]); });
+            input.addEventListener('change', () => { if (input.files.length) previewReport(input.files); });
             ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
                 e.preventDefault(); zone.classList.add('dragover');
             }));
@@ -2320,8 +2436,8 @@
                 e.preventDefault(); zone.classList.remove('dragover');
             }));
             zone.addEventListener('drop', e => {
-                const f = e.dataTransfer.files[0];
-                if (f) uploadReport(f);
+                e.preventDefault();
+                if (e.dataTransfer.files.length) previewReport(e.dataTransfer.files);
             });
         })();
 

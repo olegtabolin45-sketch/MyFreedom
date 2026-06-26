@@ -94,7 +94,7 @@ def _make_portfolio(client, token, name="Брокер") -> int:
 
 def _xlsx_files(report):
     return {
-        "file": (
+        "files": (
             "report.xlsx",
             report,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -160,13 +160,60 @@ def test_aggregate_sums_portfolios(client, registered):
     assert gazp["quantity"] == 20  # 10 + 10
 
 
+def test_import_preview_reports_summary_without_saving(client, registered):
+    """Предпросмотр возвращает сводку и не пишет в портфель."""
+    token = registered["access_token"]
+    pid = _make_portfolio(client, token)
+    report = _build_sample_report()
+    prev = client.post(
+        "/api/portfolio/import/preview",
+        params={"token": token, "portfolio_id": pid},
+        files=_xlsx_files(report),
+    )
+    assert prev.status_code == 200, prev.text
+    s = prev.json()
+    assert s["new_trades"] == 1
+    assert s["assets"] == 1
+    assert s["period"]["from"] == "27.11.2024"
+    # ничего не сохранилось
+    got = client.get("/api/portfolio", params={"token": token, "portfolio_id": pid}).json()
+    assert got["has_data"] is False
+
+
+def test_import_accepts_multiple_files(client, registered):
+    """Можно загрузить несколько файлов разом; дубли между ними схлопываются."""
+    token = registered["access_token"]
+    pid = _make_portfolio(client, token)
+    report = _build_sample_report()
+    files = [
+        (
+            "files",
+            ("a.xlsx", report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ),
+        (
+            "files",
+            ("b.xlsx", report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ),
+    ]
+    resp = client.post(
+        "/api/portfolio/import",
+        params={"token": token, "portfolio_id": pid},
+        files=files,
+    )
+    assert resp.status_code == 200, resp.text
+    # одна и та же сделка в двух файлах → одна новая
+    assert resp.json()["new_trades"] == 1
+    got = client.get("/api/portfolio", params={"token": token, "portfolio_id": pid}).json()
+    assert len(got["trades"]) == 1
+
+
 def test_import_rejects_non_xlsx(client, registered):
     token = registered["access_token"]
     pid = _make_portfolio(client, token)
     resp = client.post(
         "/api/portfolio/import",
         params={"token": token, "portfolio_id": pid},
-        files={"file": ("report.txt", b"not a spreadsheet", "text/plain")},
+        files={"files": ("report.txt", b"not a spreadsheet", "text/plain")},
     )
     assert resp.status_code == 400
 
