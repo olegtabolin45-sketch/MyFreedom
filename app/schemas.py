@@ -77,6 +77,25 @@ class RegisterRequest(_StrictModel):
         return v
 
 
+class PortfolioCreate(_StrictModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=500)
+    currency: str = Field(default="RUB")
+    kind: str = Field(default="broker")  # broker | virtual
+    broker_commission: float | None = Field(default=None, ge=0, le=100)
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
+        code = (v or "RUB").upper()
+        return code if code in ALLOWED_CURRENCIES else "RUB"
+
+    @field_validator("kind")
+    @classmethod
+    def validate_kind(cls, v: str) -> str:
+        return v if v in ("broker", "virtual") else "broker"
+
+
 class LoginRequest(_StrictModel):
     email: EmailStr = Field(..., max_length=255)
     # Лимит длины — защита от гигантских payload'ов; правила сложности тут не нужны

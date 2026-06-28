@@ -273,21 +273,23 @@
         .ob-countries-hint { margin-top: 14px; font-size: 13px; color: #86868b; }
 
         /* ===== Личный кабинет (дашборд) ===== */
-        .dash { max-width: 1000px; margin: 32px auto 64px; padding: 0 24px; width: 100%; }
+        .dash { max-width: 1340px; margin: 32px auto 64px; padding: 0 32px; width: 100%; }
         @keyframes dashIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .reveal { opacity: 0; animation: dashIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
         /* Шапка профиля */
-        .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
-        .dash-profile { display: flex; align-items: center; gap: 16px; }
+        .dash-header { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
+        .dash-profile { display: flex; align-items: center; gap: 13px; flex: 0 0 auto; }
         .dash-avatar {
-            width: 56px; height: 56px; border-radius: 16px;
+            width: 48px; height: 48px; border-radius: 14px;
             background: linear-gradient(135deg, #5b6ef5 0%, #8a4fe0 100%); color: #fff;
-            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
-            box-shadow: 0 6px 16px rgba(91, 110, 245, 0.28);
+            display: flex; align-items: center; justify-content: center; font-size: 21px; font-weight: 700;
+            box-shadow: 0 6px 16px rgba(91, 110, 245, 0.28); flex-shrink: 0;
         }
-        .dash-hello { font-size: 22px; font-weight: 700; color: #1d1d1f; line-height: 1.2; }
-        .dash-sub { font-size: 14px; color: #86868b; margin-top: 2px; }
+        .dash-hello { font-size: 18px; font-weight: 700; color: #1d1d1f; line-height: 1.2; white-space: nowrap; }
+        .dash-sub { font-size: 13px; color: #86868b; margin-top: 2px; white-space: nowrap; }
+        /* Переключатель портфелей в шапке занимает свободное пространство */
+        .dash-switch { flex: 1 1 auto; min-width: 0; margin-bottom: 0; padding: 2px; }
         .dash-sub .dot-sep { margin: 0 8px; color: #d2d2d7; }
         .dash-logout {
             background: #fff; color: #515154; border: 1px solid #d2d2d7; border-radius: 10px;
@@ -516,6 +518,81 @@
         .method-text span { font-size: 12.5px; color: #86868b; }
         .modal-note { font-size: 12px; color: #86868b; line-height: 1.5; margin-top: 18px; }
 
+        /* Переключатель портфелей (карточки) */
+        .pf-switch { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 18px; scrollbar-width: thin; }
+        .pf-switch-card {
+            flex: 0 0 auto; min-width: 190px; max-width: 240px; text-align: left; cursor: pointer;
+            background: #fff; border: 1.5px solid #e5e5ea; border-radius: 16px; padding: 15px 17px;
+            transition: all 0.18s ease; position: relative;
+        }
+        .pf-switch-card:hover { border-color: #c7c7cc; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+        .pf-switch-card.active { border-color: #1d1d1f; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .pf-switch-card.total { background: linear-gradient(135deg, #1d1d1f, #3a3a3f); border-color: #1d1d1f; }
+        .pf-switch-card.total .psc-name, .pf-switch-card.total .psc-val { color: #fff; }
+        .pf-switch-card.total .psc-tag { color: rgba(255,255,255,0.6); }
+        .psc-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #a1a1a6; margin-bottom: 6px; }
+        .psc-name { font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .psc-val { font-size: 19px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
+        .psc-profit { font-size: 12.5px; font-weight: 500; margin-top: 3px; }
+        .psc-profit.pf-pos { color: #24b24b; } .psc-profit.pf-neg { color: #ff5a4d; }
+        .pf-switch-card.total .psc-profit.pf-pos { color: #4ade80; } .pf-switch-card.total .psc-profit.pf-neg { color: #ff8a80; }
+        .pf-switch-new {
+            flex: 0 0 auto; min-width: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 6px; border: 1.5px dashed #c7c7cc; border-radius: 16px; background: transparent; cursor: pointer;
+            color: #515154; font-size: 13px; font-weight: 500; transition: all 0.18s ease; padding: 15px;
+        }
+        .pf-switch-new:hover { border-color: #1d1d1f; color: #1d1d1f; background: #fafafa; }
+        .pf-switch-new .pn-plus { font-size: 22px; line-height: 1; }
+
+        /* Форма «Новый портфель» */
+        .npf-field { margin-bottom: 18px; }
+        .npf-label { display: block; font-size: 13px; font-weight: 600; color: #515154; margin-bottom: 7px; }
+        .npf-input, .npf-textarea {
+            width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1.5px solid #e5e5ea; border-radius: 12px;
+            font-size: 15px; color: #1d1d1f; font-family: inherit; transition: border-color 0.18s ease; background: #fff;
+        }
+        .npf-input:focus, .npf-textarea:focus { outline: none; border-color: #1d1d1f; }
+        .npf-textarea { resize: vertical; min-height: 64px; }
+        .npf-seg { display: flex; gap: 8px; }
+        .npf-seg button {
+            flex: 1; padding: 11px 8px; border: 1.5px solid #e5e5ea; border-radius: 12px; background: #fff;
+            font-size: 14px; font-weight: 500; color: #515154; cursor: pointer; transition: all 0.18s ease;
+        }
+        .npf-seg button.active { border-color: #1d1d1f; background: #1d1d1f; color: #fff; }
+        .npf-row { display: flex; gap: 12px; }
+        .npf-row .npf-field { flex: 1; }
+        .npf-submit {
+            width: 100%; height: 50px; background: #1d1d1f; color: #fff; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-top: 4px;
+        }
+        .npf-submit:hover { background: #000; }
+        .npf-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        /* Плашка предпросмотра импорта */
+        .imp-preview { margin-top: 18px; border: 1.5px solid #e5e5ea; border-radius: 16px; padding: 18px; background: #fafafa; }
+        .imp-preview.warn { border-color: #ffd9a8; background: #fff8ef; }
+        .imp-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+        .imp-ico { font-size: 18px; }
+        .imp-title { font-size: 15px; font-weight: 700; color: #1d1d1f; }
+        .imp-files { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+        .imp-file { font-size: 12.5px; color: #515154; display: flex; align-items: center; gap: 6px; }
+        .imp-file::before { content: "📄"; font-size: 12px; }
+        .imp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .imp-chip { display: flex; align-items: center; gap: 7px; padding: 8px 13px; background: #fff; border: 1px solid #e5e5ea; border-radius: 11px; font-size: 13px; color: #515154; }
+        .imp-chip b { font-size: 15px; font-weight: 700; color: #1d1d1f; }
+        .imp-chip.add b { color: #24b24b; }
+        .imp-period { font-size: 12.5px; color: #86868b; margin-bottom: 12px; }
+        .imp-period b { color: #1d1d1f; font-weight: 600; }
+        .imp-warnings { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
+        .imp-warnings li { font-size: 12.5px; line-height: 1.5; color: #8a5a00; background: #fff3e0; border-radius: 10px; padding: 10px 12px; }
+        .imp-actions { display: flex; gap: 10px; }
+        .imp-back { flex: 0 0 auto; padding: 0 18px; height: 46px; background: #fff; border: 1.5px solid #e5e5ea; border-radius: 12px; font-size: 14px; font-weight: 500; color: #515154; cursor: pointer; transition: all 0.18s ease; }
+        .imp-back:hover { border-color: #c7c7cc; }
+        .imp-confirm { flex: 1; height: 46px; background: #1d1d1f; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .imp-confirm:hover { background: #000; }
+        .imp-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
+        .method-card.dragover { border-color: #1d1d1f; background: #f0f0f2; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -651,6 +728,8 @@
                     <div class="dash-sub" id="dashProfileSub">Финансовая стратегия</div>
                 </div>
             </div>
+            <!-- Переключатель портфелей (карточки + «Новый портфель») -->
+            <div class="pf-switch dash-switch" id="pfSwitch" style="display: none;"></div>
             <button class="dash-logout" onclick="logout()">Выйти</button>
         </div>
 
@@ -681,7 +760,7 @@
                     </div>
                     <div class="pf-value muted" id="pfValue">— ₽</div>
                     <div class="pf-sub" id="pfInvested">Вложено: —</div>
-                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron" id="pfChevron">⌄</span></div>
+                    <div class="pf-expand-hint"><span>Разбивка по счёту</span><span class="pf-chevron">→</span></div>
                 </div>
                 <div class="pf-card">
                     <div class="pf-head">
@@ -709,22 +788,15 @@
                 </div>
             </div>
 
-            <!-- Кнопка добавления портфеля (открывает модальное окно) -->
-            <div class="add-portfolio-row">
-                <button class="btn-add-portfolio" onclick="openAddModal()">＋ Добавить портфель</button>
-                <span class="add-portfolio-hint">Загрузите отчёт брокера или подключите счёт</span>
+            <!-- Загрузка отчёта в выбранный портфель -->
+            <div class="add-portfolio-row" id="importRow" style="display:none;">
+                <button class="btn-add-portfolio" onclick="openAddModal()">＋ Загрузить отчёт</button>
+                <span class="add-portfolio-hint" id="importHint">Добавьте сделки в этот портфель из отчёта брокера</span>
             </div>
-
-            <!-- Раскрывающаяся разбивка из счёта (по клику на «Текущая стоимость портфеля») -->
-            <div class="dash-card value-breakdown" id="valueBreakdown" style="display: none;">
-                <div class="dash-card-title">Разбивка из счёта</div>
-                <div class="dash-card-hint">Точные суммы за всё время по данным вашего отчёта</div>
-                <div class="brk-grid">
-                    <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
-                    <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
-                </div>
+            <!-- Подсказка, когда портфелей ещё нет -->
+            <div class="add-portfolio-row" id="emptyPfRow" style="display:none;">
+                <button class="btn-add-portfolio" onclick="openNewPfModal()">＋ Создать первый портфель</button>
+                <span class="add-portfolio-hint">Дайте портфелю имя, затем загрузите отчёт брокера</span>
             </div>
 
             <!-- Данные портфеля (после загрузки) -->
@@ -762,7 +834,7 @@
                         <tbody id="pfPositionsBody"></tbody>
                     </table>
                 </div>
-                <div class="pf-reupload">Данные из отчёта. <a onclick="openAddModal()">Добавить ещё отчёт</a></div>
+                <div class="pf-reupload" id="pfReupload">Данные из отчёта. <a onclick="openAddModal()">Добавить ещё отчёт</a></div>
             </div>
         </div>
 
@@ -958,10 +1030,10 @@
             </div>
 
             <div class="method-title">Способ для Т-Банка</div>
-            <div class="method-list">
-                <button class="method-card" onclick="document.getElementById('reportFile').click()">
+            <div class="method-list" id="importMethods">
+                <button class="method-card" id="uploadZone" onclick="document.getElementById('reportFile').click()">
                     <span class="method-icon">📄</span>
-                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Брокерский отчёт «о сделках и операциях» за период</span></span>
+                    <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Можно выбрать сразу несколько файлов за разные периоды</span></span>
                 </button>
                 <button class="method-card disabled" onclick="alert('Подключение по API — добавим на следующем этапе.')">
                     <span class="method-icon">🔌</span>
@@ -969,9 +1041,87 @@
                 </button>
             </div>
 
-            <input type="file" id="reportFile" accept=".xlsx" style="display: none;">
+            <input type="file" id="reportFile" accept=".xlsx" multiple style="display: none;">
             <div class="upload-status" id="uploadStatus" style="display: none;"></div>
-            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Можно загрузить несколько отчётов за разные периоды — данные накапливаются.</div>
+
+            <!-- Плашка предпросмотра: что будет добавлено (подтверждение перед записью) -->
+            <div class="imp-preview" id="importPreview" style="display: none;">
+                <div class="imp-head" id="impHead">
+                    <span class="imp-ico">✅</span>
+                    <span class="imp-title" id="impTitle">Готово к импорту</span>
+                </div>
+                <div class="imp-files" id="impFiles"></div>
+                <div class="imp-chips" id="impChips"></div>
+                <div class="imp-period" id="impPeriod"></div>
+                <ul class="imp-warnings" id="impWarnings"></ul>
+                <div class="imp-actions">
+                    <button class="imp-back" onclick="resetImport()">Выбрать другие файлы</button>
+                    <button class="imp-confirm" id="impConfirm" onclick="commitImport()">Подтвердить и добавить</button>
+                </div>
+            </div>
+
+            <div class="modal-note">Поддерживается формат Т-Банка (.xlsx). Несколько отчётов за разные периоды можно загрузить разом — данные накапливаются.</div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: новый портфель -->
+    <div class="modal-overlay" id="newPfModal" style="display: none;" onclick="if(event.target===this)closeNewPfModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeNewPfModal()">×</button>
+            <h2 class="modal-title">Новый портфель</h2>
+            <p class="modal-sub">Создайте отдельный портфель — например, под разных брокеров или стратегии.</p>
+
+            <div class="npf-field">
+                <label class="npf-label" for="npfName">Название портфеля</label>
+                <input class="npf-input" id="npfName" type="text" maxlength="120" placeholder="Например: ИИС, Дивидендный, Т-Банк">
+            </div>
+
+            <div class="npf-field">
+                <label class="npf-label">Тип счёта</label>
+                <div class="npf-seg" id="npfKind">
+                    <button type="button" class="active" data-kind="broker">Брокерский счёт</button>
+                    <button type="button" data-kind="virtual">Виртуальный</button>
+                </div>
+            </div>
+
+            <div class="npf-row">
+                <div class="npf-field">
+                    <label class="npf-label" for="npfCurrency">Валюта</label>
+                    <select class="npf-input" id="npfCurrency">
+                        <option value="RUB">₽ Рубль</option>
+                        <option value="USD">$ Доллар</option>
+                        <option value="EUR">€ Евро</option>
+                    </select>
+                </div>
+                <div class="npf-field">
+                    <label class="npf-label" for="npfCommission">Комиссия брокера, %</label>
+                    <input class="npf-input" id="npfCommission" type="number" step="0.01" min="0" max="100" placeholder="0.05">
+                </div>
+            </div>
+
+            <div class="npf-field">
+                <label class="npf-label" for="npfDesc">Заметки <span style="color:#a1a1a6;font-weight:400;">(необязательно)</span></label>
+                <textarea class="npf-textarea" id="npfDesc" maxlength="500" placeholder="Цель портфеля, стратегия или любые пометки"></textarea>
+            </div>
+
+            <div class="upload-status" id="npfStatus" style="display: none;"></div>
+            <button class="npf-submit" id="npfSubmit" onclick="submitNewPortfolio()">Создать портфель</button>
+            <div class="modal-note">После создания второго портфеля автоматически появится сводный «Общий капитал».</div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: разбивка из счёта -->
+    <div class="modal-overlay" id="breakdownModal" style="display: none;" onclick="if(event.target===this)closeBreakdownModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeBreakdownModal()">×</button>
+            <h2 class="modal-title">Разбивка из счёта</h2>
+            <p class="modal-sub">Точные суммы за всё время по данным вашего отчёта.</p>
+            <div class="brk-grid">
+                <div class="brk-row"><span class="brk-label">Получено начислений (дивиденды, купоны)</span><span class="brk-val pf-pos" id="brkDiv">—</span></div>
+                <div class="brk-row"><span class="brk-label">Уплачено комиссий</span><span class="brk-val pf-neg" id="brkComm">—</span></div>
+                <div class="brk-row"><span class="brk-label">Налоги (кроме налога с дивидендов)</span><span class="brk-val" id="brkTax">—</span></div>
+                <div class="brk-row"><span class="brk-label">Вложено (пополнения − выводы)</span><span class="brk-val" id="brkInvested">—</span></div>
+            </div>
         </div>
     </div>
 
@@ -1175,6 +1325,7 @@
                 } catch (e) { /* offline — токен всё равно истечёт сам */ }
             }
             clearTokens();
+            resetPortfolioState();
             document.getElementById('loginForm').reset();
             document.getElementById('registerForm').reset();
             document.querySelectorAll('.clear-btn').forEach(b => b.style.display = 'none');
@@ -1675,19 +1826,85 @@
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
         }
 
-        // Раскрытие разбивки по клику на «Текущая стоимость портфеля»
+        // Разбивка из счёта — модальное окно (по клику на «Текущая стоимость портфеля»)
         function toggleValueBreakdown() {
-            const b = document.getElementById('valueBreakdown');
-            const open = b.style.display === 'none';
-            b.style.display = open ? 'block' : 'none';
-            const ch = document.getElementById('pfChevron');
-            if (ch) ch.classList.toggle('open', open);
+            document.getElementById('breakdownModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeBreakdownModal() {
+            document.getElementById('breakdownModal').style.display = 'none';
+            document.body.style.overflow = '';
         }
 
         // Модальное окно добавления портфеля
-        function openAddModal() { document.getElementById('addModal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        function openAddModal() {
+            if (!activePortfolioId || activePortfolioId === 'all') { openNewPfModal(); return; }
+            document.getElementById('addModal').style.display = 'flex'; document.body.style.overflow = 'hidden';
+        }
         function closeAddModal() { document.getElementById('addModal').style.display = 'none'; document.body.style.overflow = ''; }
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAddModal(); });
+
+        // Модалка «Новый портфель»
+        function openNewPfModal() {
+            document.getElementById('npfName').value = '';
+            document.getElementById('npfDesc').value = '';
+            document.getElementById('npfCommission').value = '';
+            document.getElementById('npfCurrency').value = 'RUB';
+            const st = document.getElementById('npfStatus'); st.style.display = 'none';
+            document.querySelectorAll('#npfKind button').forEach((b, i) => b.classList.toggle('active', i === 0));
+            document.getElementById('newPfModal').style.display = 'flex'; document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('npfName').focus(), 50);
+        }
+        function closeNewPfModal() { document.getElementById('newPfModal').style.display = 'none'; document.body.style.overflow = ''; }
+
+        // Сегментированный выбор типа счёта
+        document.getElementById('npfKind').addEventListener('click', (e) => {
+            const btn = e.target.closest('button'); if (!btn) return;
+            document.querySelectorAll('#npfKind button').forEach(b => b.classList.toggle('active', b === btn));
+        });
+
+        async function submitNewPortfolio() {
+            const name = document.getElementById('npfName').value.trim();
+            const st = document.getElementById('npfStatus');
+            if (!name) {
+                st.style.display = 'block'; st.className = 'upload-status err';
+                st.innerText = 'Укажите название портфеля.'; return;
+            }
+            const kindBtn = document.querySelector('#npfKind button.active');
+            const commRaw = document.getElementById('npfCommission').value;
+            const payload = {
+                name,
+                description: document.getElementById('npfDesc').value.trim(),
+                currency: document.getElementById('npfCurrency').value,
+                kind: kindBtn ? kindBtn.dataset.kind : 'broker',
+                broker_commission: commRaw === '' ? null : Number(commRaw),
+            };
+            const btn = document.getElementById('npfSubmit');
+            btn.disabled = true; btn.innerText = 'Создаём…';
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/portfolios?token=' + token, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+                });
+                const result = await r.json();
+                if (r.ok) {
+                    activePortfolioId = result.id;       // переключаемся на новый портфель
+                    closeNewPfModal();
+                    await loadPortfolios();
+                    // Сразу предлагаем загрузить отчёт в новый портфель
+                    openAddModal();
+                } else {
+                    st.style.display = 'block'; st.className = 'upload-status err';
+                    st.innerText = (result.detail && (result.detail[0]?.msg || result.detail)) || 'Не удалось создать портфель.';
+                }
+            } catch (e) {
+                st.style.display = 'block'; st.className = 'upload-status err';
+                st.innerText = 'Не удалось связаться с сервером.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Создать портфель';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAddModal(); closeBreakdownModal(); closeNewPfModal(); } });
 
         // Раскрытие полной легенды диаграммы (топ-10 → все)
         let _allocExpanded = false;
@@ -1706,12 +1923,15 @@
                 tabs.style.display = 'flex';
                 goalActions.style.display = 'block';
                 switchTab('general'); // по умолчанию открываем «Общее»
-                loadPortfolio();
+                loadPortfolios();
             } else {
                 banner.style.display = 'flex';
                 banner.classList.remove('approved');
                 tabs.style.display = 'none';
                 goalActions.style.display = 'none';
+                // На экране пред-расчёта портфелей ещё нет — прячем переключатель
+                const sw = document.getElementById('pfSwitch');
+                if (sw) sw.style.display = 'none';
                 // Показываем только цель как предпросмотр
                 document.getElementById('tabGeneral').classList.remove('active');
                 document.getElementById('tabGoal').classList.add('active');
@@ -1721,14 +1941,137 @@
         // ===== ПОРТФЕЛЬ: импорт отчёта брокера =====
         const num2 = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
 
-        async function loadPortfolio() {
+        // ===== МУЛЬТИПОРТФЕЛИ =====
+        let portfolios = [];          // [{id, name, description, currency, kind, broker_commission}]
+        let activePortfolioId = null; // id портфеля или 'all' (Общий капитал)
+        const _pfCache = {};          // id/'all' -> { data, ts } — клиентский кэш данных портфеля
+        const _PF_TTL = 90 * 1000;    // фоновое обновление, если данные старше 90с
+
+        // Полный сброс состояния портфелей (при смене аккаунта / логауте)
+        function resetPortfolioState() {
+            portfolios = [];
+            activePortfolioId = null;
+            Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
+            const sw = document.getElementById('pfSwitch');
+            if (sw) { sw.innerHTML = ''; sw.style.display = 'none'; }
+        }
+
+        async function loadPortfolios() {
+            // Данные могли измениться (импорт/создание) — сбрасываем кэш
+            Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
             try {
                 const token = encodeURIComponent(getAccessToken());
-                const r = await fetch(API_BASE + '/api/portfolio?token=' + token);
-                if (!r.ok) { renderPortfolio(null); return; }
-                const data = await r.json();
-                renderPortfolio(data);
-            } catch (e) { renderPortfolio(null); }
+                const r = await fetch(API_BASE + '/api/portfolios?token=' + token);
+                portfolios = r.ok ? (await r.json()).portfolios : [];
+            } catch (e) { portfolios = []; }
+
+            // Выбор активного портфеля: при ≥2 — «Общий капитал», иначе единственный
+            const ids = portfolios.map(p => String(p.id));
+            if (activePortfolioId === 'all' && portfolios.length >= 2) {
+                // оставляем
+            } else if (!ids.includes(String(activePortfolioId))) {
+                activePortfolioId = portfolios.length >= 2 ? 'all'
+                    : (portfolios.length === 1 ? portfolios[0].id : null);
+            }
+
+            renderSwitcher();
+            await loadPortfolio();
+        }
+
+        // Запрос данных портфеля с записью в кэш
+        async function _fetchPortfolio(pid) {
+            const token = encodeURIComponent(getAccessToken());
+            const r = await fetch(API_BASE + '/api/portfolio?token=' + token + '&portfolio_id=' + pid);
+            if (!r.ok) return null;
+            const d = await r.json();
+            _pfCache[pid] = { data: d, ts: Date.now() };
+            return d;
+        }
+
+        function renderSwitcher() {
+            const box = document.getElementById('pfSwitch');
+            if (!box) return;
+            box.style.display = 'flex'; // в шапке переключатель всегда виден
+            document.getElementById('emptyPfRow').style.display = portfolios.length ? 'none' : 'flex';
+            const newBtn = `<button class="pf-switch-new" onclick="openNewPfModal()">
+                    <span class="pn-plus">＋</span><span>Новый портфель</span>
+                </button>`;
+            if (!portfolios.length) { box.innerHTML = newBtn; return; }
+
+            const cards = [];
+            if (portfolios.length >= 2) {
+                cards.push({ id: 'all', name: 'Общий капитал', total: true });
+            }
+            portfolios.forEach(p => cards.push({ id: p.id, name: p.name, total: false }));
+
+            box.innerHTML = cards.map(c => `
+                <div class="pf-switch-card ${c.total ? 'total' : ''} ${String(c.id) === String(activePortfolioId) ? 'active' : ''}"
+                     data-pid="${c.id}" onclick="selectPortfolio('${c.id}')">
+                    <div class="psc-tag">${c.total ? 'Все портфели' : 'Портфель'}</div>
+                    <div class="psc-name">${c.name}</div>
+                    <div class="psc-val" id="psc-val-${c.id}">…</div>
+                    <div class="psc-profit" id="psc-prof-${c.id}"></div>
+                </div>
+            `).join('') + newBtn;
+
+            // Значения карточек: из кэша мгновенно, иначе один запрос (результат кэшируется)
+            cards.forEach(c => {
+                const cached = _pfCache[c.id];
+                if (cached) _paintCard(c.id, cached.data);
+                else _fetchPortfolio(c.id).then(d => d && _paintCard(c.id, d));
+            });
+        }
+
+        function _paintCard(id, d) {
+            const valEl = document.getElementById('psc-val-' + id);
+            const profEl = document.getElementById('psc-prof-' + id);
+            if (!valEl) return;
+            const headline = d && (d.portfolio_total != null ? d.portfolio_total : d.total_value);
+            const sym = CURRENCY_SYMBOLS[(d && d.value_currency) || 'RUB'] || '₽';
+            valEl.innerText = headline != null ? `${nfmt.format(Math.round(headline))} ${sym}` : `— ${sym}`;
+            if (profEl && d && d.profit != null) {
+                const pos = d.profit >= 0;
+                profEl.className = 'psc-profit ' + (pos ? 'pf-pos' : 'pf-neg');
+                profEl.innerText = `${pos ? '+' : ''}${nfmt.format(Math.round(d.profit))} ${sym}`;
+            }
+        }
+
+        function selectPortfolio(id) {
+            activePortfolioId = (id === 'all') ? 'all' : Number(id);
+            // Мгновенно подсвечиваем карточку без перерисовки и перезапросов
+            document.querySelectorAll('#pfSwitch .pf-switch-card').forEach(el => {
+                el.classList.toggle('active', el.dataset.pid === String(activePortfolioId));
+            });
+            loadPortfolio();
+        }
+
+        async function loadPortfolio() {
+            // Управление кнопкой «Загрузить отчёт»: только для конкретного портфеля
+            const importRow = document.getElementById('importRow');
+            const reupload = document.getElementById('pfReupload');
+            const isReal = activePortfolioId && activePortfolioId !== 'all';
+            if (importRow) importRow.style.display = isReal ? 'flex' : 'none';
+            if (reupload) reupload.style.display = isReal ? 'block' : 'none';
+
+            if (!activePortfolioId) { resetPortfolioMetrics(); renderPortfolio(null); return; }
+            const reqFor = activePortfolioId; // защита от гонки при быстром переключении
+            const cached = _pfCache[reqFor];
+
+            if (cached) {
+                renderPortfolio(cached.data); // мгновенно из кэша — без «микропрогрузки»
+            } else {
+                resetPortfolioMetrics();      // нет кэша — чистим и ждём ответ
+            }
+
+            // Первичная загрузка или фоновое обновление устаревшего кэша
+            if (!cached || Date.now() - cached.ts > _PF_TTL) {
+                try {
+                    const fresh = await _fetchPortfolio(reqFor);
+                    if (String(reqFor) !== String(activePortfolioId)) return; // успели переключиться
+                    renderPortfolio(fresh);
+                    if (fresh) _paintCard(reqFor, fresh);
+                } catch (e) { if (!cached) renderPortfolio(null); }
+            }
         }
 
         function resetPortfolioMetrics() {
@@ -2017,24 +2360,42 @@
             });
         }
 
-        async function uploadReport(fileObj) {
+        // Файлы, ожидающие подтверждения
+        let _pendingFiles = [];
+
+        // Сбрасывает модалку импорта к выбору файлов
+        function resetImport() {
+            _pendingFiles = [];
+            document.getElementById('importPreview').style.display = 'none';
+            document.getElementById('importMethods').style.display = 'flex';
+            const st = document.getElementById('uploadStatus'); st.style.display = 'none';
+            const inp = document.getElementById('reportFile'); if (inp) inp.value = '';
+        }
+
+        // Шаг 1: разбор файлов и показ плашки подтверждения (без записи)
+        async function previewReport(fileList) {
+            const files = Array.from(fileList || []);
+            if (!files.length) return;
             const status = document.getElementById('uploadStatus');
+            if (!activePortfolioId || activePortfolioId === 'all') {
+                status.style.display = 'block'; status.className = 'upload-status err';
+                status.innerText = 'Сначала выберите конкретный портфель.'; return;
+            }
+            _pendingFiles = files;
             status.style.display = 'block'; status.className = 'upload-status';
-            status.innerText = 'Загрузка и обработка отчёта…';
+            status.innerText = `Разбираем ${files.length === 1 ? 'отчёт' : files.length + ' отчёта(ов)'}…`;
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const fd = new FormData();
-                fd.append('file', fileObj);
-                const r = await fetch(API_BASE + '/api/portfolio/import?token=' + token, { method: 'POST', body: fd });
+                files.forEach(f => fd.append('files', f));
+                const r = await fetch(API_BASE + '/api/portfolio/import/preview?token=' + token + '&portfolio_id=' + activePortfolioId, { method: 'POST', body: fd });
                 const result = await r.json();
                 if (r.ok) {
-                    status.className = 'upload-status ok';
-                    status.innerText = `Отчёт обработан: новых сделок ${result.new_trades}. Обновляем…`;
-                    await loadPortfolio(); // перезагрузка с живыми ценами MOEX
-                    setTimeout(closeAddModal, 900); // закрыть окно после успеха
+                    status.style.display = 'none';
+                    renderImportPreview(result, files);
                 } else {
                     status.className = 'upload-status err';
-                    status.innerText = result.detail || 'Не удалось обработать отчёт.';
+                    status.innerText = (result.detail && (result.detail[0]?.msg || result.detail)) || 'Не удалось обработать отчёт.';
                 }
             } catch (e) {
                 status.className = 'upload-status err';
@@ -2042,11 +2403,71 @@
             }
         }
 
+        function renderImportPreview(s, files) {
+            document.getElementById('importMethods').style.display = 'none';
+            const box = document.getElementById('importPreview');
+            const hasWarn = (s.warnings || []).length > 0;
+            box.classList.toggle('warn', hasWarn);
+            document.getElementById('impHead').querySelector('.imp-ico').innerText = hasWarn ? '⚠️' : '✅';
+            document.getElementById('impTitle').innerText = hasWarn
+                ? 'Можно импортировать, но обратите внимание'
+                : 'Готово к импорту';
+
+            document.getElementById('impFiles').innerHTML = files
+                .map(f => `<div class="imp-file">${f.name}</div>`).join('');
+
+            const chip = (label, val, add) =>
+                `<div class="imp-chip ${add ? 'add' : ''}"><span>${label}</span><b>${add && val > 0 ? '+' : ''}${val}</b></div>`;
+            document.getElementById('impChips').innerHTML =
+                chip('Активы', s.assets, false) +
+                chip('Сделки', s.new_trades, true) +
+                chip('Начисления', s.new_dividends, true) +
+                chip('Комиссии', s.new_commissions, true);
+
+            document.getElementById('impPeriod').innerHTML = s.period
+                ? `Период отчёта: <b>${s.period.from}</b> — <b>${s.period.to}</b>`
+                : '';
+
+            document.getElementById('impWarnings').innerHTML =
+                (s.warnings || []).map(w => `<li>${w}</li>`).join('');
+
+            box.style.display = 'block';
+        }
+
+        // Шаг 2: подтверждение — реальная запись в портфель
+        async function commitImport() {
+            if (!_pendingFiles.length) return;
+            const btn = document.getElementById('impConfirm');
+            btn.disabled = true; btn.innerText = 'Добавляем…';
+            const status = document.getElementById('uploadStatus');
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const fd = new FormData();
+                _pendingFiles.forEach(f => fd.append('files', f));
+                const r = await fetch(API_BASE + '/api/portfolio/import?token=' + token + '&portfolio_id=' + activePortfolioId, { method: 'POST', body: fd });
+                const result = await r.json();
+                if (r.ok) {
+                    status.style.display = 'block'; status.className = 'upload-status ok';
+                    status.innerText = `Импортировано: +${result.new_trades} сделок. Обновляем…`;
+                    await loadPortfolios();
+                    setTimeout(() => { closeAddModal(); resetImport(); }, 900);
+                } else {
+                    status.style.display = 'block'; status.className = 'upload-status err';
+                    status.innerText = result.detail || 'Не удалось импортировать.';
+                }
+            } catch (e) {
+                status.style.display = 'block'; status.className = 'upload-status err';
+                status.innerText = 'Не удалось связаться с сервером.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Подтвердить и добавить';
+            }
+        }
+
         (function initUpload() {
             const input = document.getElementById('reportFile');
             const zone = document.getElementById('uploadZone');
             if (!input || !zone) return;
-            input.addEventListener('change', () => { if (input.files[0]) uploadReport(input.files[0]); });
+            input.addEventListener('change', () => { if (input.files.length) previewReport(input.files); });
             ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
                 e.preventDefault(); zone.classList.add('dragover');
             }));
@@ -2054,8 +2475,8 @@
                 e.preventDefault(); zone.classList.remove('dragover');
             }));
             zone.addEventListener('drop', e => {
-                const f = e.dataTransfer.files[0];
-                if (f) uploadReport(f);
+                e.preventDefault();
+                if (e.dataTransfer.files.length) previewReport(e.dataTransfer.files);
             });
         })();
 
