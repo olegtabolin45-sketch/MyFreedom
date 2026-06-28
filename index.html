@@ -1325,6 +1325,7 @@
                 } catch (e) { /* offline — токен всё равно истечёт сам */ }
             }
             clearTokens();
+            resetPortfolioState();
             document.getElementById('loginForm').reset();
             document.getElementById('registerForm').reset();
             document.querySelectorAll('.clear-btn').forEach(b => b.style.display = 'none');
@@ -1928,6 +1929,9 @@
                 banner.classList.remove('approved');
                 tabs.style.display = 'none';
                 goalActions.style.display = 'none';
+                // На экране пред-расчёта портфелей ещё нет — прячем переключатель
+                const sw = document.getElementById('pfSwitch');
+                if (sw) sw.style.display = 'none';
                 // Показываем только цель как предпросмотр
                 document.getElementById('tabGeneral').classList.remove('active');
                 document.getElementById('tabGoal').classList.add('active');
@@ -1942,6 +1946,15 @@
         let activePortfolioId = null; // id портфеля или 'all' (Общий капитал)
         const _pfCache = {};          // id/'all' -> { data, ts } — клиентский кэш данных портфеля
         const _PF_TTL = 90 * 1000;    // фоновое обновление, если данные старше 90с
+
+        // Полный сброс состояния портфелей (при смене аккаунта / логауте)
+        function resetPortfolioState() {
+            portfolios = [];
+            activePortfolioId = null;
+            Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
+            const sw = document.getElementById('pfSwitch');
+            if (sw) { sw.innerHTML = ''; sw.style.display = 'none'; }
+        }
 
         async function loadPortfolios() {
             // Данные могли измениться (импорт/создание) — сбрасываем кэш
