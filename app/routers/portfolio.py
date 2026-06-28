@@ -127,6 +127,23 @@ async def get_history(token: str, portfolio_id: str = "all"):
             }
             for r in cursor.fetchall()
         ]
+        # Текущие позиции, кэш и потоки — чтобы привязать «сейчас» к данным «Общего»
+        cursor.execute(
+            "SELECT ticker, SUM(quantity) FROM portfolio_positions "
+            "WHERE email = %s" + flt + " GROUP BY ticker HAVING SUM(quantity) > 0",
+            (email, *tail),
+        )
+        cur_positions = [{"ticker": r[0], "quantity": r[1]} for r in cursor.fetchall()]
+        cursor.execute(
+            "SELECT amount FROM portfolio_cash WHERE email = %s" + flt + " AND currency = 'RUB'",
+            (email, *tail),
+        )
+        rub_cash = sum(r[0] for r in cursor.fetchall())
+        cursor.execute(
+            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s" + flt,
+            (email, *tail),
+        )
+        cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
     except HTTPException:
         raise
     except Exception as e:
@@ -151,7 +168,23 @@ async def get_history(token: str, portfolio_id: str = "all"):
         price_hist = {tk: f.result() for tk, f in futs.items()}
         index_hist = idx_fut.result()
 
-    result = history.build_series(trades, price_hist, index_hist)
+    # Реальный текущий снимок (как на вкладке «Общее»): живые котировки + рублёвый кэш
+    cur_qmap = quotes.get_quotes([p["ticker"] for p in cur_positions])
+    sec_value = sum(
+        cur_qmap[p["ticker"]]["price"] * p["quantity"]
+        for p in cur_positions
+        if cur_qmap.get(p["ticker"]) and cur_qmap[p["ticker"]].get("price")
+    )
+    current_value = round(sec_value + rub_cash, 2) if (sec_value or rub_cash) else None
+    current_invested = metrics.compute_metrics(trades, None, cashflows)["invested"]
+
+    result = history.build_series(
+        trades,
+        price_hist,
+        index_hist,
+        current_value=current_value,
+        current_invested=current_invested,
+    )
     if result is None:
         return {"series": [], "currency": "RUB"}
     result["currency"] = "RUB"

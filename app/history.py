@@ -66,10 +66,18 @@ def _trade_events(trades: list[dict]) -> list[tuple]:
     return evs
 
 
-def build_series(trades: list[dict], price_hist: dict, index_hist: dict) -> dict | None:
+def build_series(
+    trades: list[dict],
+    price_hist: dict,
+    index_hist: dict,
+    current_value: float | None = None,
+    current_invested: float | None = None,
+) -> dict | None:
     """Строит ряд {date, value, invested, benchmark} + доходности портфеля и индекса.
 
     price_hist: {ticker: {date_iso: close}}; index_hist: {date_iso: close}.
+    current_value/current_invested: реальный текущий снимок (как на вкладке
+    «Общее») — им заменяем последнюю точку, чтобы цифры сходились между вкладками.
     """
     evs = _trade_events(trades)
     if not evs:
@@ -118,6 +126,13 @@ def build_series(trades: list[dict], price_hist: dict, index_hist: dict) -> dict
                 "benchmark": round(bench, 2),
             }
         )
+
+    # Привязываем последнюю точку к реальному снимку «Общего» (живые котировки + кэш)
+    if current_value is not None:
+        series[-1]["value"] = round(current_value, 2)
+    if current_invested is not None:
+        series[-1]["invested"] = round(current_invested, 2)
+        invested = current_invested
 
     final_value = series[-1]["value"]
     final_bench = series[-1]["benchmark"]
