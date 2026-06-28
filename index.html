@@ -2567,20 +2567,31 @@
             const id = activePortfolioId;
             if (!id) return;
             const cached = _dynCache[id];
-            if (cached) renderDynamics(cached.data);
-            else {
-                document.getElementById('dynChart').innerHTML =
-                    '<div class="pf-note">Считаем историю по котировкам MOEX…</div>';
-            }
-            if (!cached || Date.now() - cached.ts > _PF_TTL) {
-                try {
-                    const token = encodeURIComponent(getAccessToken());
-                    const r = await fetch(API_BASE + '/api/portfolio/history?token=' + token + '&portfolio_id=' + id);
-                    if (!r.ok) return;
-                    const data = await r.json();
-                    _dynCache[id] = { data, ts: Date.now() };
-                    if (String(id) === String(activePortfolioId)) renderDynamics(data);
-                } catch (e) { /* тихо */ }
+            if (cached) { renderDynamics(cached.data); return; }
+
+            // Видимый лоадер (карточки/график ещё скрыты)
+            document.getElementById('dynCards').style.display = 'none';
+            document.getElementById('dynNote').style.display = 'none';
+            document.getElementById('dynEmpty').style.display = 'none';
+            document.getElementById('dynChartCard').style.display = 'block';
+            document.getElementById('dynChart').innerHTML =
+                '<div class="pf-note">Считаем историю по котировкам MOEX… это может занять несколько секунд.</div>';
+            try {
+                const token = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/portfolio/history?token=' + token + '&portfolio_id=' + id);
+                if (!r.ok) {
+                    if (String(id) === String(activePortfolioId))
+                        document.getElementById('dynChart').innerHTML =
+                            '<div class="pf-note">Не удалось загрузить историю. Попробуйте обновить страницу.</div>';
+                    return;
+                }
+                const data = await r.json();
+                _dynCache[id] = { data, ts: Date.now() };
+                if (String(id) === String(activePortfolioId)) renderDynamics(data);
+            } catch (e) {
+                if (String(id) === String(activePortfolioId))
+                    document.getElementById('dynChart').innerHTML =
+                        '<div class="pf-note">Не удалось связаться с сервером.</div>';
             }
         }
 
