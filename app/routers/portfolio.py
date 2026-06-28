@@ -34,6 +34,45 @@ def _scope(portfolio_id: str):
     return " AND portfolio_id IS NOT NULL", ()
 
 
+@router.get("/calendar")
+async def get_calendar(token: str, portfolio_id: str = "all"):
+    """Календарь предстоящих выплат (дивиденды/купоны) на 12 мес вперёд."""
+    email = decode_access_token(token)
+    flt, tail = _scope(portfolio_id)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT name, ticker, isin, SUM(quantity) FROM portfolio_positions "
+            "WHERE email = %s" + flt + " GROUP BY ticker, name, isin HAVING SUM(quantity) > 0",
+            (email, *tail),
+        )
+        positions = [
+            {"name": r[0], "ticker": r[1], "isin": r[2], "quantity": r[3]}
+            for r in cursor.fetchall()
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Ошибка календаря выплат: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка получения календаря.") from e
+    finally:
+        if conn is not None:
+            conn.close()
+
+    events = dividends.payment_schedule(positions)
+    # Группировка по месяцам (YYYY-MM)
+    by_month: dict[str, float] = {}
+    for ev in events:
+        m = ev["date"][:7]
+        by_month[m] = round(by_month.get(m, 0.0) + ev["amount"], 2)
+    months = [{"month": m, "total": t} for m, t in sorted(by_month.items())]
+    total = round(sum(ev["amount"] for ev in events), 2)
+    return {"events": events, "by_month": months, "total": total, "currency": "RUB"}
+
+
 @router.get("")
 async def get_portfolio(token: str, portfolio_id: str = "all"):
     """Позиции/сделки портфеля (или агрегат всех при portfolio_id=all)."""
