@@ -704,6 +704,7 @@
         .paybar-lbl { font-size: 11.5px; color: #86868b; text-transform: capitalize; }
         .paybar.now .paybar-lbl { color: #1d1d1f; font-weight: 700; }
         @media (max-width: 920px) { .paysum { grid-template-columns: 1fr; } }
+        .tax-ldv { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; color: #1f8f3e; background: #e8f5ec; padding: 1px 7px; border-radius: 7px; }
 
         /* Баннер утверждения цели */
         .approve-banner {
@@ -867,6 +868,7 @@
             <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
             <button class="dash-tab" data-tab="trades" onclick="switchTab('trades')">Сделки</button>
             <button class="dash-tab" data-tab="payouts" onclick="switchTab('payouts')">Выплаты</button>
+            <button class="dash-tab" data-tab="taxes" onclick="switchTab('taxes')">Налоги</button>
             <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
         </div>
 
@@ -1009,6 +1011,48 @@
                     </div>
                     <div class="paybars" id="payBars"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА «НАЛОГИ»: оценка НДФЛ (резидент РФ) -->
+        <div class="tab-panel" id="tabTaxes">
+            <div class="pf-grid">
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Уплачено налогов</span>
+                        <span class="pf-info" title="Сумма налогов из ваших брокерских отчётов за всё время (кроме налога с дивидендов).">i</span></div>
+                    <div class="pf-value muted" id="taxPaid">— ₽</div>
+                    <div class="pf-sub">За всё время</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Удержано с дивидендов</span>
+                        <span class="pf-info" title="Оценка налога, удержанного брокером с дивидендов (13%). Расчёт по чистым начислениям.">i</span></div>
+                    <div class="pf-value muted" id="taxDiv">— ₽</div>
+                    <div class="pf-sub">Оценка, 13%</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Нереализованная прибыль</span>
+                        <span class="pf-info" title="Бумажная прибыль по открытым позициям (стоимость − вложено). Налог возникает только при продаже.">i</span></div>
+                    <div class="pf-value muted" id="taxUnreal">— ₽</div>
+                    <div class="pf-sub">По открытым позициям</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Налог при продаже</span>
+                        <span class="pf-info" title="Оценка НДФЛ при продаже всех прибыльных позиций сейчас: 13% до 5 млн ₽ налоговой базы и 15% сверх. Позиции в собственности более 3 лет освобождаются (ЛДВ).">i</span></div>
+                    <div class="pf-value muted" id="taxOnSale">— ₽</div>
+                    <div class="pf-sub" id="taxLdvSaved">ЛДВ: —</div>
+                </div>
+            </div>
+
+            <div class="pf-section-title">Налог по позициям (при продаже сейчас)</div>
+            <div class="pf-table-wrap">
+                <table class="pf-table">
+                    <thead><tr><th>Актив</th><th class="num">Прибыль/убыток</th><th>Срок владения</th><th class="num">Налог при продаже</th></tr></thead>
+                    <tbody id="taxBody"></tbody>
+                </table>
+            </div>
+            <div class="pf-note" id="taxNote" style="margin-top: 14px;">
+                Оценка для налогового резидента РФ (НДФЛ 13% / 15% сверх 5 млн ₽ базы). ЛДВ —
+                упрощённо для бумаг в собственности более 3 лет. Не является налоговой консультацией.
             </div>
         </div>
 
@@ -1988,6 +2032,7 @@
             document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
             document.getElementById('tabTrades').classList.toggle('active', name === 'trades');
             document.getElementById('tabPayouts').classList.toggle('active', name === 'payouts');
+            document.getElementById('tabTaxes').classList.toggle('active', name === 'taxes');
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
             if (name === 'payouts') loadCalendar(); // лениво подгружаем календарь
         }
@@ -2379,6 +2424,74 @@
 
             renderAllocation(data, denom, curSym);
             loadCalendar(); // календарь выплат (лениво, с кэшем)
+            renderTaxes(data); // вкладка «Налоги»
+        }
+
+        // ===== НАЛОГИ (оценка НДФЛ, резидент РФ) =====
+        function _parseRuDate(s) {
+            const p = (s || '').split('.');
+            return p.length === 3 ? new Date(+p[2], +p[1] - 1, +p[0]) : null;
+        }
+
+        function renderTaxes(data) {
+            const sym = CURRENCY_SYMBOLS[data.value_currency || 'RUB'] || '₽';
+            const money = (v) => `${nfmt.format(Math.round(v))} ${sym}`;
+
+            // Первая покупка по тикеру — для льготы долгосрочного владения (ЛДВ, 3 года)
+            const firstBuy = {};
+            (data.trades || []).forEach(t => {
+                if (!t.ticker || !(t.side || '').toLowerCase().includes('покуп')) return;
+                const d = _parseRuDate(t.date);
+                if (d && (!firstBuy[t.ticker] || d < firstBuy[t.ticker])) firstBuy[t.ticker] = d;
+            });
+            const now = new Date();
+            const ldvCutoff = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
+
+            let taxableGain = 0, ldvGain = 0, totalUnreal = 0;
+            const rows = (data.positions || []).map(p => {
+                const gain = p.pos_profit;
+                const fb = firstBuy[p.ticker];
+                const ldv = fb && fb <= ldvCutoff;
+                let held = '—';
+                if (fb) {
+                    const yrs = (now - fb) / (365.25 * 864e5);
+                    held = yrs >= 1 ? `${yrs.toFixed(1).replace('.', ',')} г.` : `${Math.round(yrs * 12)} мес.`;
+                }
+                if (gain != null) {
+                    totalUnreal += gain;
+                    if (gain > 0) { if (ldv) ldvGain += gain; else taxableGain += gain; }
+                }
+                const rowTax = (gain != null && gain > 0 && !ldv) ? gain * 0.13 : 0;
+                const gCls = gain == null ? '' : (gain >= 0 ? 'pf-pos' : 'pf-neg');
+                const gTxt = gain == null ? '—' : `${gain >= 0 ? '+' : ''}${money(gain)}`;
+                const ldvBadge = ldv ? '<span class="tax-ldv">ЛДВ · 0%</span>' : '';
+                return `<tr><td>${p.name || p.ticker || '—'}</td>` +
+                    `<td class="num ${gCls}">${gTxt}</td>` +
+                    `<td>${held} ${ldvBadge}</td>` +
+                    `<td class="num">${rowTax ? money(rowTax) : '—'}</td></tr>`;
+            });
+
+            // Прогрессивная ставка: 13% до 5 млн базы, 15% сверх
+            const LIMIT = 5_000_000;
+            const estTax = taxableGain <= LIMIT
+                ? taxableGain * 0.13
+                : LIMIT * 0.13 + (taxableGain - LIMIT) * 0.15;
+            const taxPaid = Math.abs(data.taxes || 0);
+            const divWithheld = data.dividends ? data.dividends / 0.87 * 0.13 : 0;
+
+            const setVal = (id, v, cls) => {
+                const e = document.getElementById(id); if (!e) return;
+                e.innerText = money(v); e.classList.remove('muted', 'pf-pos', 'pf-neg');
+                if (cls) e.classList.add(cls);
+            };
+            setVal('taxPaid', taxPaid);
+            setVal('taxDiv', divWithheld);
+            setVal('taxUnreal', totalUnreal, totalUnreal >= 0 ? 'pf-pos' : 'pf-neg');
+            setVal('taxOnSale', estTax);
+            document.getElementById('taxLdvSaved').innerText = ldvGain > 0
+                ? `ЛДВ экономит ≈ ${money(ldvGain * 0.13)}` : 'ЛДВ: нет подходящих позиций';
+            document.getElementById('taxBody').innerHTML =
+                rows.join('') || '<tr><td colspan="4">Нет открытых позиций</td></tr>';
         }
 
         // ===== КАЛЕНДАРЬ ВЫПЛАТ =====
