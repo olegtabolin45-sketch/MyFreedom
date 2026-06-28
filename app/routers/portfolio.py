@@ -6,7 +6,7 @@ portfolio_id=all агрегирует все портфели пользоват
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
-from app import audit, dividends, metrics, quotes, tbank
+from app import audit, dividends, history, metrics, quotes, tbank
 from app.broker_import import parse_broker_report
 from app.db import get_db_connection
 from app.logging_config import logger
@@ -97,6 +97,60 @@ async def get_calendar(token: str, portfolio_id: str = "all"):
         "annual_yield": annual_yield,
         "currency": "RUB",
     }
+
+
+@router.get("/history")
+async def get_history(token: str, portfolio_id: str = "all"):
+    """Динамика стоимости портфеля по месяцам + сравнение с индексом IMOEX."""
+    email = decode_access_token(token)
+    flt, tail = _scope(portfolio_id)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT trade_date, side, ticker, quantity, amount, is_fx "
+            "FROM portfolio_trades WHERE email = %s" + flt + " ORDER BY id",
+            (email, *tail),
+        )
+        trades = [
+            {
+                "date": r[0],
+                "side": r[1],
+                "ticker": r[2],
+                "quantity": r[3],
+                "amount": r[4],
+                "is_fx": bool(r[5]),
+            }
+            for r in cursor.fetchall()
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Ошибка истории портфеля: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка получения истории.") from e
+    finally:
+        if conn is not None:
+            conn.close()
+
+    # Дата первой сделки → с какого момента тянуть котировки
+    dates = [history._parse(t["date"]) for t in trades if not t["is_fx"]]
+    dates = [d for d in dates if d]
+    if not dates:
+        return {"series": [], "currency": "RUB"}
+    frm = min(dates).isoformat()
+
+    tickers = {t["ticker"] for t in trades if t["ticker"] and not t["is_fx"]}
+    price_hist = {tk: quotes.history_closes(tk, frm) for tk in tickers}
+    index_hist = quotes.index_history("IMOEX", frm)
+
+    result = history.build_series(trades, price_hist, index_hist)
+    if result is None:
+        return {"series": [], "currency": "RUB"}
+    result["currency"] = "RUB"
+    result["benchmark_name"] = "IMOEX"
+    return result
 
 
 @router.get("")

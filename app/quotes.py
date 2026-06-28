@@ -32,10 +32,18 @@ _BONDS_URL = (
 )
 
 
-def _http_json(url: str) -> dict:
+def _http_json(url: str, timeout: int = 5, retries: int = 1) -> dict:
     req = urllib.request.Request(url, headers={"User-Agent": "Aeterna/1.0"})
-    with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310 (доверенный домен MOEX)
-        return json.loads(resp.read().decode("utf-8"))
+    last = None
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (домен MOEX)
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as e:  # SSL/таймауты MOEX бывают плавающими — повторяем
+            last = e
+            if attempt < retries - 1:
+                time.sleep(0.6)
+    raise last
 
 
 def _first_price(row: list, idxs: list[int]) -> float | None:
@@ -157,3 +165,87 @@ def get_quotes(tickers: list[str]) -> dict[str, dict]:
         result[t] = {"price": price, "prev_close": prev, "currency": currency}
 
     return result
+
+
+# ===== Историческая динамика (для графика и бенчмарка) =====
+_HIST_TTL = 12 * 3600
+_hist_cache: dict[str, tuple[dict, float]] = {}  # key -> ({date: close}, fetched_at)
+
+
+def _fetch_history(path: str, columns: str, frm: str, conv=None) -> dict:
+    """Качает дневные закрытия из history-эндпоинта MOEX с пагинацией."""
+    base = (
+        f"https://iss.moex.com/iss/history/{path}.json"
+        f"?iss.meta=off&from={frm}&history.columns={columns}"
+    )
+    out: dict[str, float] = {}
+    start = 0
+    for _ in range(60):  # предохранитель от бесконечного цикла
+        data = _http_json(f"{base}&start={start}", timeout=10, retries=3)
+        block = data.get("history", {})
+        cols, rows = block.get("columns", []), block.get("data", [])
+        if not rows:
+            break
+        i_date = cols.index("TRADEDATE")
+        for row in rows:
+            close = conv(row, cols) if conv else row[cols.index("CLOSE")]
+            if row[i_date] and close:
+                out[row[i_date]] = round(float(close), 4)
+        start += len(rows)
+        if len(rows) < 100:
+            break
+    return out
+
+
+def _bond_close(row: list, cols: list) -> float | None:
+    """Цена облигации в рублях = CLOSE (% номинала) × FACEVALUE / 100."""
+    close = row[cols.index("CLOSE")]
+    face = row[cols.index("FACEVALUE")] if "FACEVALUE" in cols else None
+    if close is None:
+        return None
+    return float(close) * float(face) / 100 if face else float(close)
+
+
+def history_closes(ticker: str, frm: str) -> dict:
+    """История закрытий по бумаге (акции/фонды, иначе облигации). Кэш 12 ч."""
+    if not config.QUOTES_ENABLED:
+        return {}
+    key = f"{ticker}:{frm}"
+    cached = _hist_cache.get(key)
+    if cached and time.time() - cached[1] < _HIST_TTL:
+        return cached[0]
+    out = {}
+    try:
+        out = _fetch_history(
+            f"engines/stock/markets/shares/securities/{ticker}", "TRADEDATE,CLOSE", frm
+        )
+        if not out:
+            out = _fetch_history(
+                f"engines/stock/markets/bonds/securities/{ticker}",
+                "TRADEDATE,CLOSE,FACEVALUE",
+                frm,
+                conv=_bond_close,
+            )
+    except Exception as e:
+        logger.warning("MOEX история по %s: %s", ticker, e)
+    _hist_cache[key] = (out, time.time())
+    return out
+
+
+def index_history(secid: str, frm: str) -> dict:
+    """История значений индекса MOEX (например, IMOEX). Кэш 12 ч."""
+    if not config.QUOTES_ENABLED:
+        return {}
+    key = f"idx:{secid}:{frm}"
+    cached = _hist_cache.get(key)
+    if cached and time.time() - cached[1] < _HIST_TTL:
+        return cached[0]
+    out = {}
+    try:
+        out = _fetch_history(
+            f"engines/stock/markets/index/securities/{secid}", "TRADEDATE,CLOSE", frm
+        )
+    except Exception as e:
+        logger.warning("MOEX история индекса %s: %s", secid, e)
+    _hist_cache[key] = (out, time.time())
+    return out
