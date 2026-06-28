@@ -682,6 +682,29 @@
         .cal2-ev-yield { color: #86868b; font-weight: 500; }
         @media (max-width: 760px) { .cal2-day { min-height: 78px; padding: 5px; } .cal2-ev-name { font-size: 11px; } }
 
+        /* Сводка за год + поток выплат по месяцам */
+        .paysum { display: grid; grid-template-columns: 300px 1fr; gap: 18px; margin-top: 22px; }
+        .paysum-card { background: linear-gradient(155deg, #1d1d1f 0%, #2c2c34 100%); border-radius: 18px; padding: 22px; color: #fff; }
+        .paysum-cap { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+        .paysum-total { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 18px; }
+        .paysum-rows { display: flex; flex-direction: column; gap: 2px; }
+        .paysum-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+        .paysum-k { font-size: 13.5px; color: rgba(255,255,255,0.72); }
+        .paysum-row b { font-size: 15px; font-weight: 700; }
+        .paybar-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 18px; padding: 22px 22px 14px; }
+        .paybar-head { margin-bottom: 18px; }
+        .paybars { display: flex; align-items: flex-end; gap: 10px; height: 200px; }
+        .paybar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+        .paybar-val { font-size: 11px; font-weight: 700; color: #1d1d1f; white-space: nowrap; opacity: 0.85; }
+        .paybar-track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+        .paybar-fill { width: 100%; border-radius: 8px 8px 4px 4px; background: linear-gradient(180deg, #6c7bff 0%, #8a4fe0 100%); min-height: 3px; transition: transform 0.18s ease, filter 0.18s ease; transform-origin: bottom; }
+        .paybar.zero .paybar-fill { background: #ececf0; }
+        .paybar.now .paybar-fill { background: linear-gradient(180deg, #24b24b 0%, #14913a 100%); }
+        .paybar:hover .paybar-fill { filter: brightness(1.06); transform: scaleY(1.015); }
+        .paybar-lbl { font-size: 11.5px; color: #86868b; text-transform: capitalize; }
+        .paybar.now .paybar-lbl { color: #1d1d1f; font-weight: 700; }
+        @media (max-width: 920px) { .paysum { grid-template-columns: 1fr; } }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -966,6 +989,26 @@
             </div>
             <div class="cal-empty" id="calEmpty" style="display:none;">
                 Предстоящих выплат не найдено. По акциям будущие дивиденды появляются после их объявления.
+            </div>
+
+            <!-- Сводка за год + поток выплат по месяцам -->
+            <div class="paysum" id="paySum" style="display:none;">
+                <div class="paysum-card">
+                    <div class="paysum-cap">Всего за 12 месяцев</div>
+                    <div class="paysum-total" id="paySumTotal">—</div>
+                    <div class="paysum-rows">
+                        <div class="paysum-row"><span class="paysum-k">В месяц</span><b id="paySumMonth">—</b></div>
+                        <div class="paysum-row"><span class="paysum-k">В день</span><b id="paySumDay">—</b></div>
+                        <div class="paysum-row"><span class="paysum-k">Доходность</span><b id="paySumYield">—</b></div>
+                    </div>
+                </div>
+                <div class="paybar-card">
+                    <div class="paybar-head">
+                        <div class="dash-card-title">Поток выплат по месяцам</div>
+                        <div class="dash-card-hint">Ближайшие 12 месяцев · наведите столбец для деталей</div>
+                    </div>
+                    <div class="paybars" id="payBars"></div>
+                </div>
             </div>
         </div>
 
@@ -2360,6 +2403,8 @@
 
         const _MONTHS_FULL = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
             'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const _MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн',
+            'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
         const _WDAYS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
         let _calRaw = null;           // последний ответ календаря
         let _calView = 'calendar';    // 'calendar' | 'list'
@@ -2416,11 +2461,13 @@
             if (!events.length) {
                 empty.style.display = 'block';
                 grid.style.display = 'none'; listWrap.style.display = 'none';
+                document.getElementById('paySum').style.display = 'none';
                 document.getElementById('cal2Month').innerText = '';
                 document.getElementById('cal2MonthTotal').innerText = '';
                 return;
             }
             empty.style.display = 'none';
+            renderPaySummary();
 
             // Шапка: месяц + сумма за месяц
             const y = _calMonth.getFullYear(), m = _calMonth.getMonth();
@@ -2434,6 +2481,39 @@
 
             if (_calView === 'calendar') renderCalGrid(y, m, monthEvents);
             else renderCalList(events);
+        }
+
+        function renderPaySummary() {
+            const d = _calRaw;
+            const box = document.getElementById('paySum');
+            const events = (d && d.events) || [];
+            if (!events.length) { box.style.display = 'none'; return; }
+            box.style.display = 'grid';
+            const sym = _calSym();
+            const total = d.total || 0;
+            document.getElementById('paySumTotal').innerText = `${nfmt.format(Math.round(total))} ${sym}`;
+            document.getElementById('paySumMonth').innerText = `${nfmt.format(Math.round(total / 12))} ${sym}`;
+            document.getElementById('paySumDay').innerText = `${nfmt.format(Math.round(total / 365))} ${sym}`;
+            document.getElementById('paySumYield').innerText = d.annual_yield != null ? `${num2.format(d.annual_yield)}%` : '—';
+
+            // Поток по месяцам: 12 месяцев вперёд от текущего
+            const now = new Date();
+            const totals = (d.by_month || []).reduce((a, m) => (a[m.month] = m.total, a), {});
+            const buckets = [];
+            for (let i = 0; i < 12; i++) {
+                const dt = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+                buckets.push({ lbl: _MONTHS_SHORT[dt.getMonth()], total: totals[key] || 0, now: i === 0 });
+            }
+            const max = Math.max(...buckets.map(b => b.total), 1);
+            document.getElementById('payBars').innerHTML = buckets.map(b => {
+                const h = b.total > 0 ? Math.max(3, Math.round(b.total / max * 100)) : 0;
+                return `<div class="paybar ${b.total > 0 ? '' : 'zero'} ${b.now ? 'now' : ''}" title="${b.lbl}: ${nfmt.format(Math.round(b.total))} ${sym}">
+                    <div class="paybar-val">${b.total > 0 ? _calShort(b.total) : ''}</div>
+                    <div class="paybar-track"><div class="paybar-fill" style="height:${h}%"></div></div>
+                    <div class="paybar-lbl">${b.lbl}</div>
+                </div>`;
+            }).join('');
         }
 
         function renderCalGrid(y, m, monthEvents) {

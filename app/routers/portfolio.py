@@ -81,7 +81,22 @@ async def get_calendar(token: str, portfolio_id: str = "all"):
         by_month[m] = round(by_month.get(m, 0.0) + ev["amount"], 2)
     months = [{"month": m, "total": t} for m, t in sorted(by_month.items())]
     total = round(sum(ev["amount"] for ev in events), 2)
-    return {"events": events, "by_month": months, "total": total, "currency": "RUB"}
+
+    # Годовая доходность выплат к стоимости бумаг портфеля
+    securities_value = sum(
+        q["price"] * p["quantity"]
+        for p in positions
+        if (q := qmap.get(p["ticker"])) and q.get("price")
+    )
+    annual_yield = round(total / securities_value * 100, 2) if securities_value else None
+
+    return {
+        "events": events,
+        "by_month": months,
+        "total": total,
+        "annual_yield": annual_yield,
+        "currency": "RUB",
+    }
 
 
 @router.get("")
