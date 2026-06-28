@@ -16,6 +16,7 @@ _BASE = "https://invest-public-api.tinkoff.ru/rest/tinkoff.public.invest.api.con
 _CACHE_TTL = 6 * 3600
 _uid_cache: dict[str, tuple] = {}  # ticker -> (uid, kind, ts)
 _income_cache: dict[str, tuple[float, float]] = {}  # uid -> (annual_per_unit, ts)
+_sched_cache: dict[str, tuple[list, float]] = {}  # uid -> (events, ts)
 
 
 def is_enabled() -> bool:
@@ -88,6 +89,80 @@ def _annual_coupon(uid: str) -> float:
     if not d:
         return 0.0
     return sum(_money(x.get("payOneBond")) for x in d.get("events", []))
+
+
+def _dividend_events(uid: str) -> list[dict]:
+    """Объявленные дивиденды на бумагу на 12 мес вперёд: [{date, per_unit}]."""
+    today = datetime.date.today()
+    frm = today.isoformat() + "T00:00:00Z"
+    to = (today + datetime.timedelta(days=365)).isoformat() + "T23:59:59Z"
+    d = _post("GetDividends", {"instrumentId": uid, "from": frm, "to": to})
+    out = []
+    if d:
+        for x in d.get("dividends", []):
+            date = (x.get("paymentDate") or x.get("lastBuyDate") or "")[:10]
+            per = _money(x.get("dividendNet") or x.get("dividend"))
+            if date and per:
+                out.append({"date": date, "kind": "dividend", "per_unit": per})
+    return out
+
+
+def _coupon_events(uid: str) -> list[dict]:
+    """Купоны на облигацию на 12 мес вперёд: [{date, per_unit}]."""
+    today = datetime.date.today()
+    frm = today.isoformat() + "T00:00:00Z"
+    to = (today + datetime.timedelta(days=365)).isoformat() + "T23:59:59Z"
+    d = _post("GetBondCoupons", {"instrumentId": uid, "from": frm, "to": to})
+    out = []
+    if d:
+        for x in d.get("events", []):
+            date = (x.get("couponDate") or "")[:10]
+            per = _money(x.get("payOneBond"))
+            if date and per:
+                out.append({"date": date, "kind": "coupon", "per_unit": per})
+    return out
+
+
+def payment_schedule(positions: list[dict]) -> list[dict]:
+    """Предстоящие выплаты (дивиденды/купоны) на 12 мес вперёд по позициям.
+
+    Возвращает список событий [{date, ticker, name, kind, per_unit, quantity, amount}].
+    """
+    events = []
+    now = time.time()
+    for p in positions:
+        ticker = p.get("ticker") or ""
+        qty = p.get("quantity") or 0
+        name = p.get("name") or ticker
+        if not ticker or qty <= 0:
+            continue
+        try:
+            uid, kind = _resolve(ticker)
+            if not uid:
+                continue
+            cached = _sched_cache.get(uid)
+            if cached and now - cached[1] < _CACHE_TTL:
+                raw = cached[0]
+            else:
+                raw = _coupon_events(uid) if kind == "bond" else _dividend_events(uid)
+                _sched_cache[uid] = (raw, now)
+        except Exception as e:
+            logger.warning("T-Bank: расписание выплат по %s: %s", ticker, e)
+            continue
+        for ev in raw:
+            events.append(
+                {
+                    "date": ev["date"],
+                    "ticker": ticker,
+                    "name": name,
+                    "kind": ev["kind"],
+                    "per_unit": round(ev["per_unit"], 4),
+                    "quantity": qty,
+                    "amount": round(ev["per_unit"] * qty, 2),
+                }
+            )
+    events.sort(key=lambda e: e["date"])
+    return events
 
 
 # Сектора T-Bank → русские категории

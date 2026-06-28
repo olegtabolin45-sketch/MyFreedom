@@ -236,6 +236,24 @@ def test_import_accepts_multiple_files(client, registered):
     assert len(got["trades"]) == 1
 
 
+def test_calendar_endpoint_shape(client, registered):
+    """Эндпоинт календаря отвечает корректной структурой (в тестах сеть выключена)."""
+    token = registered["access_token"]
+    pid = _make_portfolio(client, token)
+    report = _build_sample_report()
+    client.post(
+        "/api/portfolio/import",
+        params={"token": token, "portfolio_id": pid},
+        files=_xlsx_files(report),
+    )
+    r = client.get("/api/portfolio/calendar", params={"token": token, "portfolio_id": pid})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert set(data) >= {"events", "by_month", "total", "currency"}
+    assert isinstance(data["events"], list)
+    assert data["total"] == 0.0  # QUOTES_ENABLED=false → выплаты не запрашиваются
+
+
 def test_import_rejects_non_xlsx(client, registered):
     token = registered["access_token"]
     pid = _make_portfolio(client, token)
