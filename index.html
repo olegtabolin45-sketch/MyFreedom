@@ -706,6 +706,15 @@
         @media (max-width: 920px) { .paysum { grid-template-columns: 1fr; } }
         .tax-ldv { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; color: #1f8f3e; background: #e8f5ec; padding: 1px 7px; border-radius: 7px; }
 
+        /* Динамика портфеля */
+        .dyn-chart { position: relative; width: 100%; margin-top: 8px; }
+        .dyn-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+        .dyn-legend { display: flex; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+        .dyn-lg { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #515154; }
+        .dyn-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+        .dyn-tip { position: absolute; pointer-events: none; background: #1d1d1f; color: #fff; font-size: 12px; padding: 8px 11px; border-radius: 9px; white-space: nowrap; transform: translate(-50%, -120%); z-index: 5; box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
+        .dyn-tip b { font-weight: 700; }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -867,6 +876,7 @@
         <div class="dash-tabs" id="dashTabs" style="display: none;">
             <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
             <button class="dash-tab" data-tab="trades" onclick="switchTab('trades')">Сделки</button>
+            <button class="dash-tab" data-tab="dynamics" onclick="switchTab('dynamics')">Динамика</button>
             <button class="dash-tab" data-tab="payouts" onclick="switchTab('payouts')">Выплаты</button>
             <button class="dash-tab" data-tab="taxes" onclick="switchTab('taxes')">Налоги</button>
             <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
@@ -969,6 +979,47 @@
                 </table>
             </div>
             <div id="tradesEmpty" class="pf-note" style="display:none;">Сделок нет. Загрузите отчёт на вкладке «Общее».</div>
+        </div>
+
+        <!-- ВКЛАДКА «ДИНАМИКА»: стоимость портфеля во времени vs индекс -->
+        <div class="tab-panel" id="tabDynamics">
+            <div class="pf-grid" id="dynCards" style="display:none;">
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Стоимость сейчас</span></div>
+                    <div class="pf-value" id="dynValue">— ₽</div>
+                    <div class="pf-sub" id="dynInvested">Вложено: —</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Если бы в индекс</span>
+                        <span class="pf-info" title="Те же вложения и в те же даты, но в индекс MOEX (IMOEX). Money-weighted сравнение.">i</span></div>
+                    <div class="pf-value" id="dynBench">— ₽</div>
+                    <div class="pf-sub" id="dynBenchName">IMOEX</div>
+                </div>
+                <div class="pf-card">
+                    <div class="pf-head"><span class="pf-label">Опережение индекса</span></div>
+                    <div class="pf-value" id="dynEdge">—</div>
+                    <div class="pf-sub" id="dynEdgePct">—</div>
+                </div>
+            </div>
+
+            <div class="dash-card" id="dynChartCard" style="display:none;">
+                <div class="dash-card-title">Динамика стоимости портфеля</div>
+                <div class="dash-card-hint">Реконструкция по сделкам · помесячно · сравнение с индексом IMOEX</div>
+                <div class="dyn-chart" id="dynChart"></div>
+                <div class="dyn-legend">
+                    <span class="dyn-lg"><span class="dyn-dot" style="background:#5b6ef5"></span>Портфель</span>
+                    <span class="dyn-lg"><span class="dyn-dot" style="background:#c7c7cc"></span>Вложено</span>
+                    <span class="dyn-lg"><span class="dyn-dot" style="background:#ff9f0a"></span>Индекс IMOEX</span>
+                </div>
+                <div class="dyn-tip" id="dynTip" style="display:none;"></div>
+            </div>
+            <div class="pf-note" id="dynNote" style="display:none; margin-top:14px;">
+                Расчёт по загруженным сделкам и историческим ценам MOEX. Если часть бумаг куплена
+                до периода ваших отчётов, ранняя часть истории может быть неполной.
+            </div>
+            <div class="pf-note" id="dynEmpty" style="display:none;">
+                Недостаточно данных для графика. Загрузите отчёт со сделками на вкладке «Общее».
+            </div>
         </div>
 
         <!-- ВКЛАДКА «ВЫПЛАТЫ»: календарь дивидендов и купонов -->
@@ -2031,10 +2082,12 @@
             });
             document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
             document.getElementById('tabTrades').classList.toggle('active', name === 'trades');
+            document.getElementById('tabDynamics').classList.toggle('active', name === 'dynamics');
             document.getElementById('tabPayouts').classList.toggle('active', name === 'payouts');
             document.getElementById('tabTaxes').classList.toggle('active', name === 'taxes');
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
             if (name === 'payouts') loadCalendar(); // лениво подгружаем календарь
+            if (name === 'dynamics') loadDynamics(); // лениво строим график динамики
         }
 
         // Разбивка из счёта — модальное окно (по клику на «Текущая стоимость портфеля»)
@@ -2164,6 +2217,7 @@
             activePortfolioId = null;
             Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
             Object.keys(_calCache).forEach(k => delete _calCache[k]);
+            Object.keys(_dynCache).forEach(k => delete _dynCache[k]);
             const sw = document.getElementById('pfSwitch');
             if (sw) { sw.innerHTML = ''; sw.style.display = 'none'; }
         }
@@ -2172,6 +2226,7 @@
             // Данные могли измениться (импорт/создание) — сбрасываем кэш
             Object.keys(_pfCache).forEach(k => delete _pfCache[k]);
             Object.keys(_calCache).forEach(k => delete _calCache[k]);
+            Object.keys(_dynCache).forEach(k => delete _dynCache[k]);
             try {
                 const token = encodeURIComponent(getAccessToken());
                 const r = await fetch(API_BASE + '/api/portfolios?token=' + token);
@@ -2285,6 +2340,9 @@
                     if (fresh) _paintCard(reqFor, fresh);
                 } catch (e) { if (!cached) renderPortfolio(null); }
             }
+
+            // Если открыта вкладка «Динамика» — обновим график под новый портфель
+            if (document.getElementById('tabDynamics').classList.contains('active')) loadDynamics();
         }
 
         function resetPortfolioMetrics() {
@@ -2492,6 +2550,136 @@
                 ? `ЛДВ экономит ≈ ${money(ldvGain * 0.13)}` : 'ЛДВ: нет подходящих позиций';
             document.getElementById('taxBody').innerHTML =
                 rows.join('') || '<tr><td colspan="4">Нет открытых позиций</td></tr>';
+        }
+
+        // ===== ДИНАМИКА ПОРТФЕЛЯ (vs индекс) =====
+        const _dynCache = {}; // id -> { data, ts }
+        let _dynData = null;
+
+        function _shortRub(v, sym) {
+            const a = Math.abs(v);
+            if (a >= 1e6) return `${num2.format(v / 1e6)} млн ${sym}`;
+            if (a >= 1e3) return `${num2.format(Math.round(v / 100) / 10)} тыс ${sym}`;
+            return `${nfmt.format(Math.round(v))} ${sym}`;
+        }
+
+        async function loadDynamics() {
+            const id = activePortfolioId;
+            if (!id) return;
+            const cached = _dynCache[id];
+            if (cached) renderDynamics(cached.data);
+            else {
+                document.getElementById('dynChart').innerHTML =
+                    '<div class="pf-note">Считаем историю по котировкам MOEX…</div>';
+            }
+            if (!cached || Date.now() - cached.ts > _PF_TTL) {
+                try {
+                    const token = encodeURIComponent(getAccessToken());
+                    const r = await fetch(API_BASE + '/api/portfolio/history?token=' + token + '&portfolio_id=' + id);
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    _dynCache[id] = { data, ts: Date.now() };
+                    if (String(id) === String(activePortfolioId)) renderDynamics(data);
+                } catch (e) { /* тихо */ }
+            }
+        }
+
+        function renderDynamics(d) {
+            const series = (d && d.series) || [];
+            const sym = CURRENCY_SYMBOLS[(d && d.currency) || 'RUB'] || '₽';
+            const cards = document.getElementById('dynCards');
+            const chartCard = document.getElementById('dynChartCard');
+            const note = document.getElementById('dynNote');
+            const empty = document.getElementById('dynEmpty');
+
+            if (series.length < 2) {
+                cards.style.display = 'none'; chartCard.style.display = 'none';
+                note.style.display = 'none'; empty.style.display = 'block';
+                return;
+            }
+            cards.style.display = 'grid'; chartCard.style.display = 'block';
+            note.style.display = 'block'; empty.style.display = 'none';
+
+            const fv = d.final_value || 0, fb = d.final_benchmark || 0;
+            document.getElementById('dynValue').innerText = `${nfmt.format(Math.round(fv))} ${sym}`;
+            document.getElementById('dynInvested').innerText = `Вложено: ${nfmt.format(Math.round(Math.max(d.invested || 0, 0)))} ${sym}`;
+            document.getElementById('dynBench').innerText = `${nfmt.format(Math.round(fb))} ${sym}`;
+            const edge = fv - fb;
+            const edgeEl = document.getElementById('dynEdge');
+            edgeEl.innerText = `${edge >= 0 ? '+' : ''}${nfmt.format(Math.round(edge))} ${sym}`;
+            edgeEl.className = 'pf-value ' + (edge >= 0 ? 'pf-pos' : 'pf-neg');
+            const edgePct = fb > 0 ? (fv / fb - 1) * 100 : null;
+            document.getElementById('dynEdgePct').innerText = edgePct != null
+                ? `${edgePct >= 0 ? 'выше' : 'ниже'} индекса на ${num2.format(Math.abs(edgePct))}%` : '—';
+
+            _dynData = series.map(p => ({
+                date: p.date,
+                value: Math.max(p.value, 0),
+                invested: Math.max(p.invested, 0),
+                benchmark: Math.max(p.benchmark, 0),
+            }));
+            _drawDynChart(sym);
+        }
+
+        function _drawDynChart(sym) {
+            const s = _dynData;
+            const W = 820, H = 300, padL = 56, padR = 14, padT = 16, padB = 28;
+            const plotW = W - padL - padR, plotH = H - padT - padB;
+            const n = s.length;
+            const maxY = Math.max(...s.flatMap(p => [p.value, p.invested, p.benchmark]), 1);
+            const x = i => padL + (n === 1 ? 0 : i / (n - 1) * plotW);
+            const y = v => padT + plotH * (1 - v / maxY);
+            const line = (key, color, dash) => {
+                const pts = s.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ');
+                return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" ${dash ? 'stroke-dasharray="5 5"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`;
+            };
+            // Горизонтальная сетка + подписи Y
+            let grid = '';
+            for (let g = 0; g <= 4; g++) {
+                const v = maxY * g / 4, yy = y(v);
+                grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="#eee" stroke-width="1"/>`;
+                grid += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#a1a1a6">${_shortRub(v, '').trim()}</text>`;
+            }
+            // Подписи X (≈6 равномерно)
+            let xlbl = '';
+            const step = Math.max(1, Math.round(n / 6));
+            for (let i = 0; i < n; i += step) {
+                const p = s[i].date.split('-');
+                xlbl += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#a1a1a6">${p[2] === '01' ? p[1] + '.' + p[0].slice(2) : p[1] + '.' + p[0].slice(2)}</text>`;
+            }
+            // Заливка под портфелем
+            const area = `${s.map((p, i) => `${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')} ${x(n - 1).toFixed(1)},${y(0)} ${x(0).toFixed(1)},${y(0)}`;
+            const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
+                <defs><linearGradient id="dynGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5b6ef5" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#5b6ef5" stop-opacity="0"/></linearGradient></defs>
+                ${grid}
+                <polygon points="${area}" fill="url(#dynGrad)"/>
+                ${line('invested', '#c7c7cc', true)}
+                ${line('benchmark', '#ff9f0a', false)}
+                ${line('value', '#5b6ef5', false)}
+                ${xlbl}
+            </svg>`;
+            const chart = document.getElementById('dynChart');
+            chart.innerHTML = svg;
+            _bindDynHover(chart, sym, x, W);
+        }
+
+        function _bindDynHover(chart, sym, xFn, W) {
+            const s = _dynData, tip = document.getElementById('dynTip');
+            const svg = chart.querySelector('svg');
+            svg.addEventListener('mousemove', (e) => {
+                const rc = svg.getBoundingClientRect();
+                const px = (e.clientX - rc.left) / rc.width * W;
+                let bi = 0, bd = Infinity;
+                s.forEach((p, i) => { const dd = Math.abs(xFn(i) - px); if (dd < bd) { bd = dd; bi = i; } });
+                const p = s[bi], dt = p.date.split('-');
+                tip.style.display = 'block';
+                tip.style.left = (xFn(bi) / W * rc.width) + 'px';
+                tip.style.top = '0px';
+                tip.innerHTML = `<b>${dt[2]}.${dt[1]}.${dt[0]}</b><br>Портфель: ${nfmt.format(Math.round(p.value))} ${sym}<br>Индекс: ${nfmt.format(Math.round(p.benchmark))} ${sym}`;
+            });
+            svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
         }
 
         // ===== КАЛЕНДАРЬ ВЫПЛАТ =====
