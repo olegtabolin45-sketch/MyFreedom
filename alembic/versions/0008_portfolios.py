@@ -5,6 +5,7 @@ Revises: 0007
 Create Date: 2026-06-25
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -30,7 +31,12 @@ def upgrade() -> None:
         sa.Column("kind", sa.String(length=20), nullable=False, server_default="broker"),
         sa.Column("broker_commission", sa.Float(), nullable=True),
         sa.Column("positions_asof", sa.String(length=20), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.ForeignKeyConstraint(["email"], ["users.email"], ondelete="CASCADE"),
     )
     op.create_index("ix_portfolios_email", "portfolios", ["email"])
@@ -40,8 +46,12 @@ def upgrade() -> None:
         op.add_column(table, sa.Column("portfolio_id", sa.BigInteger(), nullable=True))
         op.create_index(f"ix_{table}_portfolio", table, ["portfolio_id"])
         op.create_foreign_key(
-            f"fk_{table}_portfolio", table, "portfolios",
-            ["portfolio_id"], ["id"], ondelete="CASCADE",
+            f"fk_{table}_portfolio",
+            table,
+            "portfolios",
+            ["portfolio_id"],
+            ["id"],
+            ondelete="CASCADE",
         )
 
 
