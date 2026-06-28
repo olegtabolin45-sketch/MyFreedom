@@ -4,6 +4,8 @@
 portfolio_id=all агрегирует все портфели пользователя («Общий капитал»).
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from app import audit, dividends, history, metrics, quotes, tbank
@@ -142,8 +144,12 @@ async def get_history(token: str, portfolio_id: str = "all"):
     frm = min(dates).isoformat()
 
     tickers = {t["ticker"] for t in trades if t["ticker"] and not t["is_fx"]}
-    price_hist = {tk: quotes.history_closes(tk, frm) for tk in tickers}
-    index_hist = quotes.index_history("IMOEX", frm)
+    # Параллельно тянем историю по тикерам и индексу (иначе на «Общем капитале» долго)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futs = {tk: ex.submit(quotes.history_closes, tk, frm) for tk in tickers}
+        idx_fut = ex.submit(quotes.index_history, "IMOEX", frm)
+        price_hist = {tk: f.result() for tk, f in futs.items()}
+        index_hist = idx_fut.result()
 
     result = history.build_series(trades, price_hist, index_hist)
     if result is None:
