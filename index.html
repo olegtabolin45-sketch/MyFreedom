@@ -9,8 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
-        
-        body { 
+        /* Скроллбар всегда зарезервирован — вёрстка не «прыгает» при смене контента */
+        html { overflow-y: scroll; scrollbar-gutter: stable; }
+
+        body {
             background-color: #ffffff; /* Кристально белый чистый фон */
             color: #1d1d1f; 
             min-height: 100vh; 
@@ -273,7 +275,7 @@
         .ob-countries-hint { margin-top: 14px; font-size: 13px; color: #86868b; }
 
         /* ===== Личный кабинет (дашборд) ===== */
-        .dash { max-width: 1340px; margin: 32px auto 64px; padding: 0 32px; width: 100%; }
+        .dash { max-width: 1480px; margin: 32px auto 64px; padding: 0 24px 0 20px; width: 100%; }
         @keyframes dashIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .reveal { opacity: 0; animation: dashIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
@@ -644,6 +646,42 @@
         .dash-side .cal-date { flex-basis: 64px; font-size: 12px; }
         .dash-side .cal-total span:first-child { font-size: 18px; }
 
+        /* Календарь выплат — вкладка (сетка месяца + список) */
+        .cal2-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+        .cal2-nav { display: flex; align-items: center; gap: 10px; }
+        .cal2-navbtn { width: 32px; height: 32px; border: 1px solid #e5e5ea; background: #fff; border-radius: 9px; cursor: pointer; font-size: 17px; line-height: 1; color: #515154; transition: all 0.18s ease; }
+        .cal2-navbtn:hover { border-color: #1d1d1f; color: #1d1d1f; }
+        .cal2-month { font-size: 18px; font-weight: 700; color: #1d1d1f; text-transform: capitalize; min-width: 132px; text-align: center; }
+        .cal2-monthtotal { font-size: 13px; font-weight: 600; color: #24b24b; background: #e8f5ec; padding: 5px 12px; border-radius: 9px; }
+        .cal2-viewtoggle { display: flex; gap: 4px; background: #f0f0f2; border-radius: 11px; padding: 3px; }
+        .cal2-tg { border: none; background: transparent; padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 500; color: #515154; cursor: pointer; transition: all 0.18s ease; }
+        .cal2-tg.active { background: #fff; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        .cal2-grid { border: 1px solid #e5e5ea; border-radius: 14px; overflow: hidden; }
+        .cal2-wdays { display: grid; grid-template-columns: repeat(7, 1fr); background: #fafafa; border-bottom: 1px solid #e5e5ea; }
+        .cal2-wday { padding: 10px 12px; font-size: 11px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.04em; }
+        .cal2-week { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .cal2-week:not(:last-child) { border-bottom: 1px solid #f0f0f2; }
+        .cal2-day { min-height: 116px; padding: 8px; border-right: 1px solid #f0f0f2; display: flex; flex-direction: column; gap: 6px; }
+        .cal2-day:nth-child(7n) { border-right: none; }
+        .cal2-day.empty { background: #fcfcfd; }
+        .cal2-day.out { background: #fafafa; }
+        .cal2-dayhead { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
+        .cal2-daynum { font-size: 13px; font-weight: 600; color: #6e6e73; }
+        .cal2-day.today .cal2-daynum { background: #5b6ef5; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .cal2-daytotal { font-size: 11px; font-weight: 700; color: #24b24b; }
+        .cal2-ev { border-left: 3px solid #8a4fe0; background: #faf9ff; border-radius: 8px; padding: 7px 9px; cursor: default; }
+        .cal2-ev.dividend { border-left-color: #24b24b; background: #f4fbf6; }
+        .cal2-ev.coupon { border-left-color: #5b6ef5; background: #f5f6ff; }
+        .cal2-ev-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+        .cal2-ev-ic { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; object-fit: cover; }
+        .cal2-ev-ic-fb { width: 18px; height: 18px; border-radius: 5px; background: #e5e5ea; color: #515154; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .cal2-ev-name { font-size: 12px; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cal2-ev-bot { font-size: 12.5px; }
+        .cal2-ev-bot b { font-weight: 700; color: #1d1d1f; }
+        .cal2-ev-yield { color: #86868b; font-weight: 500; }
+        @media (max-width: 760px) { .cal2-day { min-height: 78px; padding: 5px; } .cal2-ev-name { font-size: 11px; } }
+
         /* Баннер утверждения цели */
         .approve-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -785,22 +823,6 @@
 
             <!-- Переключатель портфелей (карточки + «Новый портфель») -->
             <div class="pf-switch dash-switch" id="pfSwitch" style="display: none;"></div>
-
-            <!-- Календарь выплат (дивиденды/купоны на 12 мес) -->
-            <div class="dash-card cal-card" id="calCard" style="display:none;">
-                <div class="cal-header">
-                    <div>
-                        <div class="dash-card-title">Календарь выплат</div>
-                        <div class="dash-card-hint">Дивиденды и купоны на 12 мес (после налога)</div>
-                    </div>
-                    <div class="cal-total"><span id="calTotal">—</span><span class="cal-total-cap">за 12 мес</span></div>
-                </div>
-                <div class="cal-months" id="calMonths"></div>
-                <div class="cal-list" id="calList"></div>
-                <div class="cal-empty" id="calEmpty" style="display:none;">
-                    Предстоящих выплат не найдено. По акциям будущие дивиденды появляются после их объявления.
-                </div>
-            </div>
         </aside>
 
         <!-- ПРАВЫЙ БЛОК: основной контент -->
@@ -821,6 +843,7 @@
         <div class="dash-tabs" id="dashTabs" style="display: none;">
             <button class="dash-tab" data-tab="general" onclick="switchTab('general')">Общее</button>
             <button class="dash-tab" data-tab="trades" onclick="switchTab('trades')">Сделки</button>
+            <button class="dash-tab" data-tab="payouts" onclick="switchTab('payouts')">Выплаты</button>
             <button class="dash-tab" data-tab="goal" onclick="switchTab('goal')">Цель</button>
         </div>
 
@@ -921,6 +944,29 @@
                 </table>
             </div>
             <div id="tradesEmpty" class="pf-note" style="display:none;">Сделок нет. Загрузите отчёт на вкладке «Общее».</div>
+        </div>
+
+        <!-- ВКЛАДКА «ВЫПЛАТЫ»: календарь дивидендов и купонов -->
+        <div class="tab-panel" id="tabPayouts">
+            <div class="cal2-toolbar">
+                <div class="cal2-nav">
+                    <button class="cal2-navbtn" onclick="calShiftMonth(-1)" aria-label="Назад">‹</button>
+                    <span class="cal2-month" id="cal2Month">—</span>
+                    <button class="cal2-navbtn" onclick="calShiftMonth(1)" aria-label="Вперёд">›</button>
+                    <span class="cal2-monthtotal" id="cal2MonthTotal">+0 ₽</span>
+                </div>
+                <div class="cal2-viewtoggle">
+                    <button class="cal2-tg active" id="cal2TgCal" onclick="setCalView('calendar')">📅 Календарь</button>
+                    <button class="cal2-tg" id="cal2TgList" onclick="setCalView('list')">≣ Список</button>
+                </div>
+            </div>
+            <div class="cal2-grid" id="cal2Grid"></div>
+            <div class="cal2-listwrap" id="cal2ListWrap" style="display:none;">
+                <div class="cal-list" id="calList"></div>
+            </div>
+            <div class="cal-empty" id="calEmpty" style="display:none;">
+                Предстоящих выплат не найдено. По акциям будущие дивиденды появляются после их объявления.
+            </div>
         </div>
 
         <!-- ВКЛАДКА «ЦЕЛЬ»: стратегия и прогнозы -->
@@ -1898,7 +1944,9 @@
             });
             document.getElementById('tabGeneral').classList.toggle('active', name === 'general');
             document.getElementById('tabTrades').classList.toggle('active', name === 'trades');
+            document.getElementById('tabPayouts').classList.toggle('active', name === 'payouts');
             document.getElementById('tabGoal').classList.toggle('active', name === 'goal');
+            if (name === 'payouts') loadCalendar(); // лениво подгружаем календарь
         }
 
         // Разбивка из счёта — модальное окно (по клику на «Текущая стоимость портфеля»)
@@ -2310,55 +2358,134 @@
             }
         }
 
-        const _MONTHS_RU = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        const _MONTHS_FULL = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+            'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const _WDAYS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+        let _calRaw = null;           // последний ответ календаря
+        let _calView = 'calendar';    // 'calendar' | 'list'
+        let _calMonth = new Date();   // отображаемый месяц (1-е число)
+        const _calSym = () => CURRENCY_SYMBOLS[(_calRaw && _calRaw.currency) || 'RUB'] || '₽';
 
         function renderCalendar(d) {
-            const card = document.getElementById('calCard');
-            if (!card) return;
-            card.style.display = 'block';
+            _calRaw = d;
             const events = (d && d.events) || [];
-            const sym = CURRENCY_SYMBOLS[(d && d.currency) || 'RUB'] || '₽';
-            document.getElementById('calTotal').innerText = `${nfmt.format(Math.round(d.total || 0))} ${sym}`;
+            // По умолчанию открываем первый месяц, где есть выплаты
+            if (events.length) {
+                const first = events[0].date;
+                _calMonth = new Date(+first.slice(0, 4), +first.slice(5, 7) - 1, 1);
+            }
+            renderCalView();
+        }
 
+        function setCalView(v) {
+            _calView = v;
+            document.getElementById('cal2TgCal').classList.toggle('active', v === 'calendar');
+            document.getElementById('cal2TgList').classList.toggle('active', v === 'list');
+            renderCalView();
+        }
+
+        function calShiftMonth(delta) {
+            _calMonth = new Date(_calMonth.getFullYear(), _calMonth.getMonth() + delta, 1);
+            renderCalView();
+        }
+
+        function _calIcon(e) {
+            const letter = (e.name || e.ticker || '?').trim().charAt(0).toUpperCase();
+            return e.isin
+                ? `<img class="cal2-ev-ic" src="https://invest-brands.cdn-tinkoff.ru/${e.isin}x160.png" alt="" `
+                  + `onerror="this.outerHTML='<span class=&quot;cal2-ev-ic-fb&quot;>${letter}</span>'">`
+                : `<span class="cal2-ev-ic-fb">${letter}</span>`;
+        }
+
+        function _calEventHTML(e) {
+            const sym = _calSym();
+            const yld = e.yield_pct != null ? ` · ${num2.format(e.yield_pct)}%` : '';
+            return `<div class="cal2-ev ${e.kind}" title="${e.name}: +${nfmt.format(Math.round(e.amount))} ${sym}">
+                <div class="cal2-ev-top">${_calIcon(e)}<span class="cal2-ev-name">${e.name}</span></div>
+                <div class="cal2-ev-bot"><b>${nfmt.format(Math.round(e.amount))} ${sym}</b><span class="cal2-ev-yield">${yld}</span></div>
+            </div>`;
+        }
+
+        function renderCalView() {
+            const events = (_calRaw && _calRaw.events) || [];
             const empty = document.getElementById('calEmpty');
-            const monthsBox = document.getElementById('calMonths');
-            const listBox = document.getElementById('calList');
+            const grid = document.getElementById('cal2Grid');
+            const listWrap = document.getElementById('cal2ListWrap');
+            const sym = _calSym();
+
             if (!events.length) {
                 empty.style.display = 'block';
-                monthsBox.innerHTML = ''; listBox.innerHTML = '';
-                document.getElementById('calTotal').innerText = `0 ${sym}`;
+                grid.style.display = 'none'; listWrap.style.display = 'none';
+                document.getElementById('cal2Month').innerText = '';
+                document.getElementById('cal2MonthTotal').innerText = '';
                 return;
             }
             empty.style.display = 'none';
 
-            // 12 месяцев вперёд от текущего
-            const now = new Date();
-            const buckets = [];
-            const totals = (d.by_month || []).reduce((a, m) => (a[m.month] = m.total, a), {});
-            for (let i = 0; i < 12; i++) {
-                const dt = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-                buckets.push({ key, lbl: _MONTHS_RU[dt.getMonth()], total: totals[key] || 0 });
-            }
-            const max = Math.max(...buckets.map(b => b.total), 1);
-            monthsBox.innerHTML = buckets.map(b => {
-                const h = b.total > 0 ? Math.max(4, Math.round(b.total / max * 100)) : 0;
-                const val = b.total > 0 ? nfmt.format(Math.round(b.total)) : '';
-                return `<div class="cal-mo" title="${b.lbl}: ${nfmt.format(Math.round(b.total))} ${sym}">
-                    <div class="cal-bar-val">${val}</div>
-                    <div class="cal-bar-wrap"><div class="cal-bar ${b.total > 0 ? '' : 'empty'}" style="height:${h}%"></div></div>
-                    <div class="cal-mo-lbl">${b.lbl}</div>
-                </div>`;
-            }).join('');
+            // Шапка: месяц + сумма за месяц
+            const y = _calMonth.getFullYear(), m = _calMonth.getMonth();
+            document.getElementById('cal2Month').innerText = `${_MONTHS_FULL[m]} ${String(y).slice(2)}`;
+            const monthEvents = events.filter(e => +e.date.slice(0, 4) === y && +e.date.slice(5, 7) - 1 === m);
+            const monthTotal = monthEvents.reduce((s, e) => s + e.amount, 0);
+            document.getElementById('cal2MonthTotal').innerText = `+${nfmt.format(Math.round(monthTotal))} ${sym}`;
 
+            grid.style.display = _calView === 'calendar' ? 'block' : 'none';
+            listWrap.style.display = _calView === 'list' ? 'block' : 'none';
+
+            if (_calView === 'calendar') renderCalGrid(y, m, monthEvents);
+            else renderCalList(events);
+        }
+
+        function renderCalGrid(y, m, monthEvents) {
+            // События по числу месяца
+            const byDay = {};
+            monthEvents.forEach(e => { const d = +e.date.slice(8, 10); (byDay[d] = byDay[d] || []).push(e); });
+
+            const first = new Date(y, m, 1);
+            let startOffset = (first.getDay() + 6) % 7; // ПН=0
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            const todayIso = new Date().toISOString().slice(0, 10);
+
+            let html = '<div class="cal2-wdays">' + _WDAYS.map(w => `<div class="cal2-wday">${w}</div>`).join('') + '</div>';
+            let day = 1 - startOffset;
+            while (day <= daysInMonth) {
+                html += '<div class="cal2-week">';
+                for (let i = 0; i < 7; i++, day++) {
+                    if (day < 1 || day > daysInMonth) { html += '<div class="cal2-day out"></div>'; continue; }
+                    const evs = byDay[day] || [];
+                    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const dayTotal = evs.reduce((s, e) => s + e.amount, 0);
+                    html += `<div class="cal2-day ${evs.length ? '' : 'empty'} ${iso === todayIso ? 'today' : ''}">
+                        <div class="cal2-dayhead">
+                            <span class="cal2-daynum">${day}</span>
+                            ${dayTotal ? `<span class="cal2-daytotal">+${_calShort(dayTotal)}</span>` : ''}
+                        </div>
+                        ${evs.map(_calEventHTML).join('')}
+                    </div>`;
+                }
+                html += '</div>';
+            }
+            document.getElementById('cal2Grid').innerHTML = html;
+        }
+
+        function _calShort(v) {
+            const sym = _calSym();
+            if (v >= 1000) return `${num2.format(v / 1000)} тыс. ${sym}`;
+            return `${nfmt.format(Math.round(v))} ${sym}`;
+        }
+
+        function renderCalList(events) {
+            const sym = _calSym();
             const fmtDate = (iso) => { const p = iso.split('-'); return `${p[2]}.${p[1]}.${p[0]}`; };
-            listBox.innerHTML = events.slice(0, 30).map(e => `
-                <div class="cal-row">
+            document.getElementById('calList').innerHTML = events.map(e => {
+                const yld = e.yield_pct != null ? ` · ${num2.format(e.yield_pct)}%` : '';
+                return `<div class="cal-row">
                     <span class="cal-date">${fmtDate(e.date)}</span>
                     <span class="cal-kind ${e.kind}">${e.kind === 'coupon' ? 'Купон' : 'Дивиденд'}</span>
                     <span class="cal-name" title="${e.name}">${e.name}</span>
-                    <span class="cal-amt">+${nfmt.format(Math.round(e.amount))} ${sym}</span>
-                </div>`).join('');
+                    <span class="cal-amt">+${nfmt.format(Math.round(e.amount))} ${sym}<span class="cal2-ev-yield">${yld}</span></span>
+                </div>`;
+            }).join('');
         }
 
         // Палитра сегментов диаграммы распределения

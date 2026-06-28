@@ -63,6 +63,17 @@ async def get_calendar(token: str, portfolio_id: str = "all"):
             conn.close()
 
     events = dividends.payment_schedule(positions)
+
+    # Обогащаем события: ISIN (для иконок) и доходность выплаты к стоимости позиции
+    pos_by_ticker = {p["ticker"]: p for p in positions}
+    qmap = quotes.get_quotes([p["ticker"] for p in positions])
+    for ev in events:
+        p = pos_by_ticker.get(ev["ticker"], {})
+        ev["isin"] = p.get("isin")
+        q = qmap.get(ev["ticker"])
+        val = (q["price"] * ev["quantity"]) if (q and q.get("price") and ev["quantity"]) else 0
+        ev["yield_pct"] = round(ev["amount"] / val * 100, 2) if val else None
+
     # Группировка по месяцам (YYYY-MM)
     by_month: dict[str, float] = {}
     for ev in events:
