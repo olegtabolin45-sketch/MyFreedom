@@ -108,22 +108,26 @@ def get_account_portfolio(token: str, account_id: str) -> dict:
     """Портфель счёта: ценные бумаги (uid, кол-во, средняя/текущая цена) + кэш по валютам."""
     d = _post_user("OperationsService", "GetPortfolio", {"accountId": account_id}, token)
     positions, cash = [], {}
+    # Свободные средства — берём итог Т-Банка в рублях (все валюты уже сконвертированы)
+    cur_total = _money(d.get("totalAmountCurrencies"))
+    if cur_total:
+        cash["RUB"] = round(cur_total, 2)
     for p in d.get("positions", []):
         qty = _money(p.get("quantity"))
         if p.get("instrumentType") == "currency":
-            cur = (p.get("figi") or "RUB")[:3].upper()
-            if qty:
-                cash[cur] = cash.get(cur, 0.0) + qty
             continue
         if qty <= 0:
             continue
+        # Цена = текущая цена + НКД (накопленный купонный доход по облигациям),
+        # чтобы стоимость совпадала с приложением Т-Банка
+        price = _money(p.get("currentPrice")) + _money(p.get("currentNkd"))
         positions.append(
             {
                 "uid": p.get("instrumentUid"),
                 "figi": p.get("figi"),
                 "quantity": qty,
                 "avg": _money(p.get("averagePositionPrice")),
-                "price": _money(p.get("currentPrice")),
+                "price": price,
             }
         )
     return {"positions": positions, "cash": cash}

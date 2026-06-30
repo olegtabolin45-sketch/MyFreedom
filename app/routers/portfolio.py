@@ -231,7 +231,18 @@ def get_portfolio(token: str, portfolio_id: str = "all"):
         has_quotes = False
         for p in positions:
             q = quote_map.get(p["ticker"])
-            if q:
+            fb = p.get("fallback_price")
+            if fb:
+                # Позиция из API: считаем по цене брокера (Т-Банк) — точно как в банке
+                has_quotes = True
+                p["price"] = fb
+                p["currency"] = "RUB"
+                p["value"] = round(fb * p["quantity"], 2)
+                total_value += p["value"]
+                # Изменение за день — по котировке MOEX, если она есть
+                if q and q.get("price") and q.get("prev_close"):
+                    day_change += (q["price"] - q["prev_close"]) * p["quantity"]
+            elif q:
                 has_quotes = True
                 p["price"] = q["price"]
                 p["currency"] = q["currency"]
@@ -240,13 +251,6 @@ def get_portfolio(token: str, portfolio_id: str = "all"):
                 prev = q.get("prev_close")
                 if prev:
                     day_change += (q["price"] - prev) * p["quantity"]
-            elif p.get("fallback_price"):
-                # Нет котировки MOEX (напр., фонд из API) — берём цену от брокера
-                has_quotes = True
-                p["price"] = p["fallback_price"]
-                p["currency"] = "RUB"
-                p["value"] = round(p["fallback_price"] * p["quantity"], 2)
-                total_value += p["value"]
             else:
                 p["price"] = None
                 p["currency"] = None
