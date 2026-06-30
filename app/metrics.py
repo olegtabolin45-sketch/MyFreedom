@@ -68,10 +68,12 @@ def compute_metrics(
     trades: list[dict],
     total_value: float | None,
     cashflows: list[dict] | None = None,
+    invested_override: float | None = None,
 ) -> dict:
     """Метрики портфеля по модели Snowball.
 
-    Вложено = пополнения − выводы (внешние переводы по счёту).
+    Вложено = себестоимость текущих позиций + свободные средства (invested_override);
+    запасной вариант — пополнения − выводы из денежной секции отчёта.
     Прибыль = стоимость портфеля (бумаги + свободные средства) − вложено.
     Дивиденды/комиссии/налоги — точные агрегаты из денежной секции отчёта.
 
@@ -91,7 +93,9 @@ def compute_metrics(
     commissions = sum(c["amount"] for c in cashflows if c.get("kind") == "commission")
     taxes = sum(c["amount"] for c in cashflows if c.get("kind") == "tax")  # знаковые
 
-    invested = deposits - withdrawals  # «Вложено» по Snowball
+    # «Вложено»: себестоимость позиций + кэш (надёжнее, чем пополнения−выводы,
+    # т.к. внутренние переводы между счетами раздувают депозиты)
+    invested = invested_override if invested_override is not None else (deposits - withdrawals)
 
     result = {
         "invested": round(invested, 2),

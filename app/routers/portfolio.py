@@ -139,11 +139,6 @@ def get_history(token: str, portfolio_id: str = "all"):
             (email, *tail),
         )
         rub_cash = sum(r[0] for r in cursor.fetchall())
-        cursor.execute(
-            "SELECT flow_date, kind, amount FROM portfolio_cashflows WHERE email = %s" + flt,
-            (email, *tail),
-        )
-        cashflows = [{"date": r[0], "kind": r[1], "amount": r[2]} for r in cursor.fetchall()]
     except HTTPException:
         raise
     except Exception as e:
@@ -176,7 +171,22 @@ def get_history(token: str, portfolio_id: str = "all"):
         if cur_qmap.get(p["ticker"]) and cur_qmap[p["ticker"]].get("price")
     )
     current_value = round(sec_value + rub_cash, 2) if (sec_value or rub_cash) else None
-    current_invested = metrics.compute_metrics(trades, None, cashflows)["invested"]
+
+    # «Вложено» = себестоимость текущих позиций (средняя покупка × кол-во) + кэш
+    buy_amt: dict[str, float] = {}
+    buy_qty: dict[str, float] = {}
+    for t in trades:
+        if t.get("is_fx") or "покуп" not in (t.get("side") or "").lower():
+            continue
+        tk = t.get("ticker") or ""
+        buy_amt[tk] = buy_amt.get(tk, 0.0) + (t.get("amount") or 0)
+        buy_qty[tk] = buy_qty.get(tk, 0.0) + (t.get("quantity") or 0)
+    basis = 0.0
+    for p in cur_positions:
+        tk = p["ticker"]
+        if buy_qty.get(tk):
+            basis += (buy_amt[tk] / buy_qty[tk]) * p["quantity"]
+    current_invested = round(basis + rub_cash, 2) if basis else None
 
     result = history.build_series(
         trades,
@@ -316,7 +326,15 @@ def get_portfolio(token: str, portfolio_id: str = "all"):
         if has_quotes or cash_value:
             portfolio_total = round(total_value + cash_value, 2)
 
-        m = metrics.compute_metrics(trades, portfolio_total, cashflows)
+        # «Вложено» = себестоимость позиций + свободные средства (как в таблице);
+        # это надёжнее депозитов из API, где внутренние переводы раздувают сумму.
+        invested_basis = round(sum((p.get("invested") or 0) for p in positions) + cash_value, 2)
+        m = metrics.compute_metrics(
+            trades,
+            portfolio_total,
+            cashflows,
+            invested_override=invested_basis if invested_basis > 0 else None,
+        )
 
         inc = dividends.annual_income(positions)
         passive_income = inc["total"]
