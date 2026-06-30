@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/portfolios", tags=["portfolios"])
 
 
 @router.get("")
-async def list_portfolios(token: str):
+def list_portfolios(token: str):
     """Список портфелей пользователя."""
     email = decode_access_token(token)
     conn = None
@@ -52,7 +52,7 @@ async def list_portfolios(token: str):
 
 
 @router.post("")
-async def create_portfolio(data: PortfolioCreate, token: str, request: Request):
+def create_portfolio(data: PortfolioCreate, token: str, request: Request):
     """Создаёт новый портфель."""
     email = decode_access_token(token)
     conn = None
@@ -79,7 +79,7 @@ async def create_portfolio(data: PortfolioCreate, token: str, request: Request):
 
 
 @router.delete("/{portfolio_id}")
-async def delete_portfolio(portfolio_id: int, token: str, request: Request):
+def delete_portfolio(portfolio_id: int, token: str, request: Request):
     """Удаляет портфель и все его данные (каскадом)."""
     email = decode_access_token(token)
     conn = None

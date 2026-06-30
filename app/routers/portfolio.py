@@ -37,7 +37,7 @@ def _scope(portfolio_id: str):
 
 
 @router.get("/calendar")
-async def get_calendar(token: str, portfolio_id: str = "all"):
+def get_calendar(token: str, portfolio_id: str = "all"):
     """Календарь предстоящих выплат (дивиденды/купоны) на 12 мес вперёд."""
     email = decode_access_token(token)
     flt, tail = _scope(portfolio_id)
@@ -102,7 +102,7 @@ async def get_calendar(token: str, portfolio_id: str = "all"):
 
 
 @router.get("/history")
-async def get_history(token: str, portfolio_id: str = "all"):
+def get_history(token: str, portfolio_id: str = "all"):
     """Динамика стоимости портфеля по месяцам + сравнение с индексом IMOEX."""
     email = decode_access_token(token)
     flt, tail = _scope(portfolio_id)
@@ -193,7 +193,7 @@ async def get_history(token: str, portfolio_id: str = "all"):
 
 
 @router.get("")
-async def get_portfolio(token: str, portfolio_id: str = "all"):
+def get_portfolio(token: str, portfolio_id: str = "all"):
     """Позиции/сделки портфеля (или агрегат всех при portfolio_id=all)."""
     email = decode_access_token(token)
     flt, tail = _scope(portfolio_id)
