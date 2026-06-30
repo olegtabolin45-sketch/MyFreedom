@@ -204,13 +204,14 @@ async def get_portfolio(token: str, portfolio_id: str = "all"):
         cursor = conn.cursor()
         # Позиции (агрегируем по тикеру — для «Общего капитала» одинаковые бумаги суммируются)
         cursor.execute(
-            "SELECT name, ticker, isin, SUM(quantity) FROM portfolio_positions "
+            "SELECT name, ticker, isin, SUM(quantity), MAX(fallback_price) "
+            "FROM portfolio_positions "
             "WHERE email = %s" + flt + " GROUP BY ticker, name, isin HAVING SUM(quantity) > 0 "
             "ORDER BY name",
             (email, *tail),
         )
         positions = [
-            {"name": r[0], "ticker": r[1], "isin": r[2], "quantity": r[3]}
+            {"name": r[0], "ticker": r[1], "isin": r[2], "quantity": r[3], "fallback_price": r[4]}
             for r in cursor.fetchall()
         ]
 
@@ -229,6 +230,13 @@ async def get_portfolio(token: str, portfolio_id: str = "all"):
                 prev = q.get("prev_close")
                 if prev:
                     day_change += (q["price"] - prev) * p["quantity"]
+            elif p.get("fallback_price"):
+                # Нет котировки MOEX (напр., фонд из API) — берём цену от брокера
+                has_quotes = True
+                p["price"] = p["fallback_price"]
+                p["currency"] = "RUB"
+                p["value"] = round(p["fallback_price"] * p["quantity"], 2)
+                total_value += p["value"]
             else:
                 p["price"] = None
                 p["currency"] = None

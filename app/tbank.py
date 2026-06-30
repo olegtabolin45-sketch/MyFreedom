@@ -104,25 +104,96 @@ def get_accounts(token: str) -> list[dict]:
     return out
 
 
-def get_account_positions(token: str, account_id: str) -> list[dict]:
-    """Позиции по счёту (ценные бумаги, без валюты): uid, количество, средняя цена."""
+def get_account_portfolio(token: str, account_id: str) -> dict:
+    """Портфель счёта: ценные бумаги (uid, кол-во, средняя/текущая цена) + кэш по валютам."""
     d = _post_user("OperationsService", "GetPortfolio", {"accountId": account_id}, token)
-    out = []
+    positions, cash = [], {}
     for p in d.get("positions", []):
-        if p.get("instrumentType") == "currency":
-            continue
         qty = _money(p.get("quantity"))
+        if p.get("instrumentType") == "currency":
+            cur = (p.get("figi") or "RUB")[:3].upper()
+            if qty:
+                cash[cur] = cash.get(cur, 0.0) + qty
+            continue
         if qty <= 0:
             continue
-        out.append(
+        positions.append(
             {
                 "uid": p.get("instrumentUid"),
                 "figi": p.get("figi"),
                 "quantity": qty,
                 "avg": _money(p.get("averagePositionPrice")),
+                "price": _money(p.get("currentPrice")),
             }
         )
-    return out
+    return {"positions": positions, "cash": cash}
+
+
+def _iso_to_ddmmyyyy(s: str) -> str:
+    d = (s or "")[:10]
+    parts = d.split("-")
+    return f"{parts[2]}.{parts[1]}.{parts[0]}" if len(parts) == 3 else ""
+
+
+# Типы операций T-Bank → наши категории денежных потоков
+_CF_KINDS = {
+    "OPERATION_TYPE_DIVIDEND": "dividend",
+    "OPERATION_TYPE_COUPON": "dividend",
+    "OPERATION_TYPE_BROKER_FEE": "commission",
+    "OPERATION_TYPE_SERVICE_FEE": "commission",
+    "OPERATION_TYPE_SUCCESS_FEE": "commission",
+    "OPERATION_TYPE_TAX": "tax",
+    "OPERATION_TYPE_DIVIDEND_TAX": "tax",
+    "OPERATION_TYPE_BOND_TAX": "tax",
+    "OPERATION_TYPE_BENEFIT_TAX": "tax",
+    "OPERATION_TYPE_INPUT": "deposit",
+    "OPERATION_TYPE_OUTPUT": "withdrawal",
+}
+_BUY_TYPES = {"OPERATION_TYPE_BUY", "OPERATION_TYPE_BUY_CARD"}
+
+
+def parse_operations(token: str, account_id: str, frm: str) -> dict:
+    """История операций счёта → {trades, cashflows} в формате нашего импорта."""
+    d = _post_user(
+        "OperationsService",
+        "GetOperations",
+        {
+            "accountId": account_id,
+            "from": frm,
+            "to": datetime.datetime.utcnow().isoformat() + "Z",
+            "state": "OPERATION_STATE_EXECUTED",
+        },
+        token,
+    )
+    trades, cashflows = [], []
+    for o in d.get("operations", []):
+        ot = o.get("operationType", "")
+        pay = _money(o.get("payment"))
+        date = o.get("date", "")
+        if ot in _BUY_TYPES or ot == "OPERATION_TYPE_SELL":
+            info = instrument_by_uid(o.get("instrumentUid"), token)
+            tk = info.get("ticker")
+            qty = abs(float(o.get("quantity") or 0))
+            if qty <= 0:
+                continue
+            trades.append(
+                {
+                    "date": _iso_to_ddmmyyyy(date),
+                    "time": date[11:16],
+                    "side": "Покупка" if ot in _BUY_TYPES else "Продажа",
+                    "ticker": tk,
+                    "name": info.get("name") or tk,
+                    "price": _money(o.get("price")),
+                    "currency": (o.get("payment") or {}).get("currency", "rub").upper(),
+                    "quantity": qty,
+                    "amount": abs(pay),
+                    "commission": 0.0,
+                    "is_fx": not tk,
+                }
+            )
+        elif ot in _CF_KINDS and pay:
+            cashflows.append({"date": date[:10], "kind": _CF_KINDS[ot], "amount": round(pay, 2)})
+    return {"trades": trades, "cashflows": cashflows}
 
 
 def instrument_by_uid(uid: str, token: str) -> dict:
