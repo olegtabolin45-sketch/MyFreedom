@@ -13,3 +13,4 @@ pyotp
 qrcode[pil]
 openpyxl
 python-multipart
+cryptography
