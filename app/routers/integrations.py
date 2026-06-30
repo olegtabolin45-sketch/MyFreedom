@@ -127,7 +127,7 @@ def _sync_accounts(cursor, email: str, token: str) -> list[dict]:
 
 
 @router.get("/status")
-async def status(token: str):
+def status(token: str):
     """Подключён ли провайдер у пользователя."""
     email = decode_access_token(token)
     conn = None
@@ -146,7 +146,7 @@ async def status(token: str):
 
 
 @router.post("/tbank/connect")
-async def connect(data: TbankConnect, token: str, request: Request):
+def connect(data: TbankConnect, token: str, request: Request):
     """Подключение T-Bank по личному read-only токену."""
     email = decode_access_token(token)
     user_token = data.token.strip()
@@ -190,7 +190,7 @@ async def connect(data: TbankConnect, token: str, request: Request):
 
 
 @router.post("/tbank/sync")
-async def sync(token: str, request: Request):
+def sync(token: str, request: Request):
     """Повторная синхронизация позиций по сохранённому токену."""
     email = decode_access_token(token)
     conn = None
@@ -230,7 +230,7 @@ async def sync(token: str, request: Request):
 
 
 @router.delete("/tbank")
-async def disconnect(token: str, request: Request):
+def disconnect(token: str, request: Request):
     """Отключение интеграции (удаляет сохранённый токен; портфели остаются)."""
     email = decode_access_token(token)
     conn = None
