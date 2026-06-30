@@ -36,9 +36,7 @@ def upgrade() -> None:
 
     # Привязка портфеля к источнику и брокерскому счёту (для синхронизации по API)
     op.add_column("portfolios", sa.Column("source", sa.String(length=20), nullable=True))
-    op.add_column(
-        "portfolios", sa.Column("broker_account_id", sa.String(length=64), nullable=True)
-    )
+    op.add_column("portfolios", sa.Column("broker_account_id", sa.String(length=64), nullable=True))
 
 
 def downgrade() -> None:
