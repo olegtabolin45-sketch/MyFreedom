@@ -40,26 +40,89 @@ def _sync_accounts(cursor, email: str, token: str) -> list[dict]:
             )
             pid = cursor.fetchone()[0]
 
-        # Позиции счёта → таблица позиций портфеля (полная замена)
-        positions = tbank.get_account_positions(token, acc_id)
+        # Полная замена данных портфеля из API (API — авторитетный источник)
+        port = tbank.get_account_portfolio(token, acc_id)
         cursor.execute(
-            "DELETE FROM portfolio_positions WHERE email = %s AND portfolio_id = %s",
-            (email, pid),
+            "DELETE FROM portfolio_positions WHERE email = %s AND portfolio_id = %s", (email, pid)
         )
         saved = 0
-        for p in positions:
+        for p in port["positions"]:
             info = tbank.instrument_by_uid(p["uid"], token)
             ticker = info.get("ticker")
             if not ticker:
                 continue
             cursor.execute(
                 "INSERT INTO portfolio_positions "
-                "(email, portfolio_id, ticker, name, isin, quantity) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (email, pid, ticker, info.get("name") or ticker, info.get("isin"), p["quantity"]),
+                "(email, portfolio_id, ticker, name, isin, quantity, fallback_price) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    email,
+                    pid,
+                    ticker,
+                    info.get("name") or ticker,
+                    info.get("isin"),
+                    p["quantity"],
+                    p.get("price") or None,
+                ),
             )
             saved += 1
-        result.append({"account": acc["name"], "portfolio_id": pid, "positions": saved})
+
+        # Денежные остатки
+        cursor.execute(
+            "DELETE FROM portfolio_cash WHERE email = %s AND portfolio_id = %s", (email, pid)
+        )
+        for cur, amt in port["cash"].items():
+            cursor.execute(
+                "INSERT INTO portfolio_cash (email, portfolio_id, currency, amount) "
+                "VALUES (%s, %s, %s, %s)",
+                (email, pid, cur, amt),
+            )
+
+        # История операций → сделки и денежные потоки
+        parsed = tbank.parse_operations(token, acc_id, "2018-01-01T00:00:00Z")
+        cursor.execute(
+            "DELETE FROM portfolio_trades WHERE email = %s AND portfolio_id = %s", (email, pid)
+        )
+        for t in parsed["trades"]:
+            cursor.execute(
+                "INSERT INTO portfolio_trades "
+                "(email, portfolio_id, trade_date, trade_time, side, ticker, name, price, "
+                "currency, quantity, amount, commission, is_fx) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    email,
+                    pid,
+                    t["date"],
+                    t["time"],
+                    t["side"],
+                    t["ticker"],
+                    t["name"],
+                    t["price"],
+                    t["currency"],
+                    t["quantity"],
+                    t["amount"],
+                    t["commission"],
+                    bool(t["is_fx"]),
+                ),
+            )
+        cursor.execute(
+            "DELETE FROM portfolio_cashflows WHERE email = %s AND portfolio_id = %s", (email, pid)
+        )
+        for cf in parsed["cashflows"]:
+            cursor.execute(
+                "INSERT INTO portfolio_cashflows (email, portfolio_id, flow_date, kind, amount) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (email, pid, cf["date"], cf["kind"], cf["amount"]),
+            )
+
+        result.append(
+            {
+                "account": acc["name"],
+                "portfolio_id": pid,
+                "positions": saved,
+                "trades": len(parsed["trades"]),
+            }
+        )
     return result
 
 
