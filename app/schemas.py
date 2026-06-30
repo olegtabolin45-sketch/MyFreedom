@@ -96,6 +96,11 @@ class PortfolioCreate(_StrictModel):
         return v if v in ("broker", "virtual") else "broker"
 
 
+class TbankConnect(_StrictModel):
+    # Личный read-only токен T-Bank Invest API
+    token: str = Field(..., min_length=10, max_length=200)
+
+
 class LoginRequest(_StrictModel):
     email: EmailStr = Field(..., max_length=255)
     # Лимит длины — защита от гигантских payload'ов; правила сложности тут не нужны

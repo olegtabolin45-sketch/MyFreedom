@@ -7,6 +7,7 @@
 import datetime
 import json
 import time
+import urllib.error
 import urllib.request
 
 from app import config
@@ -48,6 +49,106 @@ def _money(m: dict) -> float:
     if not m:
         return 0.0
     return float(m.get("units", 0) or 0) + float(m.get("nano", 0) or 0) / 1e9
+
+
+# ===== Доступ по ЛИЧНОМУ токену пользователя (read-only API) =====
+_HOST = "https://invest-public-api.tinkoff.ru/rest/tinkoff.public.invest.api.contract.v1"
+_inst_cache: dict[str, dict] = {}  # uid -> {ticker, name, isin}
+
+_ACCOUNT_TYPE_RU = {
+    "ACCOUNT_TYPE_TINKOFF": "Брокерский счёт",
+    "ACCOUNT_TYPE_TINKOFF_IIS": "ИИС",
+    "ACCOUNT_TYPE_INVEST_BOX": "Инвесткопилка",
+}
+
+
+class TBankAuthError(Exception):
+    """Невалидный/просроченный токен или нет прав."""
+
+
+def _post_user(service: str, method: str, payload: dict, token: str) -> dict:
+    """POST к произвольному сервису T-Bank API с пользовательским токеном."""
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        f"{_HOST}.{service}/{method}",
+        data=data,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
+    last = None
+    for _ in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310 (домен T-Bank)
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise TBankAuthError() from e
+            last = e
+            time.sleep(0.8)
+        except Exception as e:
+            last = e
+            time.sleep(0.8)
+    raise last
+
+
+def get_accounts(token: str) -> list[dict]:
+    """Открытые брокерские счета пользователя."""
+    d = _post_user("UsersService", "GetAccounts", {}, token)
+    out = []
+    for a in d.get("accounts", []):
+        status = a.get("status", "")
+        if status and status != "ACCOUNT_STATUS_OPEN":
+            continue
+        atype = a.get("type", "")
+        name = a.get("name") or _ACCOUNT_TYPE_RU.get(atype, "Счёт Т-Банк")
+        out.append({"id": a["id"], "name": name, "type": atype})
+    return out
+
+
+def get_account_positions(token: str, account_id: str) -> list[dict]:
+    """Позиции по счёту (ценные бумаги, без валюты): uid, количество, средняя цена."""
+    d = _post_user("OperationsService", "GetPortfolio", {"accountId": account_id}, token)
+    out = []
+    for p in d.get("positions", []):
+        if p.get("instrumentType") == "currency":
+            continue
+        qty = _money(p.get("quantity"))
+        if qty <= 0:
+            continue
+        out.append(
+            {
+                "uid": p.get("instrumentUid"),
+                "figi": p.get("figi"),
+                "quantity": qty,
+                "avg": _money(p.get("averagePositionPrice")),
+            }
+        )
+    return out
+
+
+def instrument_by_uid(uid: str, token: str) -> dict:
+    """uid инструмента → {ticker, name, isin}. Кэш в памяти."""
+    if not uid:
+        return {}
+    if uid in _inst_cache:
+        return _inst_cache[uid]
+    info = {}
+    try:
+        d = _post_user(
+            "InstrumentsService",
+            "GetInstrumentBy",
+            {"idType": "INSTRUMENT_ID_TYPE_UID", "id": uid},
+            token,
+        )
+        ins = (d or {}).get("instrument", {}) or {}
+        info = {
+            "ticker": ins.get("ticker"),
+            "name": ins.get("name"),
+            "isin": ins.get("isin"),
+        }
+    except Exception as e:
+        logger.warning("T-Bank: инструмент по uid %s: %s", uid, e)
+    _inst_cache[uid] = info
+    return info
 
 
 def _resolve(ticker: str):

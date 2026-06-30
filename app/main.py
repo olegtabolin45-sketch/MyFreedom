@@ -5,7 +5,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
 from app.middleware import SecurityHeadersMiddleware
-from app.routers import auth, frontend, portfolio, portfolios, two_factor, users
+from app.routers import (
+    auth,
+    frontend,
+    integrations,
+    portfolio,
+    portfolios,
+    two_factor,
+    users,
+)
 
 app = FastAPI(title="MyFreedom Core API", version="1.1.0")
 
@@ -26,3 +34,4 @@ app.include_router(users.router)
 app.include_router(two_factor.router)
 app.include_router(portfolio.router)
 app.include_router(portfolios.router)
+app.include_router(integrations.router)

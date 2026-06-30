@@ -589,6 +589,11 @@
         }
         .npf-submit:hover { background: #000; }
         .npf-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+        .npf-or { text-align: center; font-size: 12px; color: #a1a1a6; margin: 14px 0 10px; position: relative; }
+        .npf-api { width: 100%; padding: 13px; border: 1.5px solid #ffdd2d; background: #fffdf0; border-radius: 12px; font-size: 14px; font-weight: 600; color: #1d1d1f; cursor: pointer; transition: all 0.18s ease; }
+        .npf-api:hover { background: #fff8d6; }
+        .tb-steps { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 16px; }
+        .tb-step { font-size: 12.5px; color: #515154; background: #f7f7f9; border-radius: 10px; padding: 9px 12px; }
 
         /* Плашка предпросмотра импорта */
         .imp-preview { margin-top: 18px; border: 1.5px solid #e5e5ea; border-radius: 16px; padding: 18px; background: #fafafa; }
@@ -1294,9 +1299,9 @@
                     <span class="method-icon">📄</span>
                     <span class="method-text"><b>Загрузить отчёт (.xlsx)</b><span>Можно выбрать сразу несколько файлов за разные периоды</span></span>
                 </button>
-                <button class="method-card disabled" onclick="alert('Подключение по API — добавим на следующем этапе.')">
+                <button class="method-card" onclick="closeAddModal(); openTbankModal()">
                     <span class="method-icon">🔌</span>
-                    <span class="method-text"><b>Подключить по API <span class="soon-badge">скоро</span></b><span>Автосинхронизация сделок и цен напрямую от брокера</span></span>
+                    <span class="method-text"><b>Подключить по API (read-only)</b><span>Счета и позиции подтянутся автоматически из Т-Банка</span></span>
                 </button>
             </div>
 
@@ -1365,7 +1370,33 @@
 
             <div class="upload-status" id="npfStatus" style="display: none;"></div>
             <button class="npf-submit" id="npfSubmit" onclick="submitNewPortfolio()">Создать портфель</button>
+            <div class="npf-or">или</div>
+            <button class="npf-api" onclick="closeNewPfModal(); openTbankModal()">🔌 Подключить Т-Банк по API — счета добавятся сами</button>
             <div class="modal-note">После создания второго портфеля автоматически появится сводный «Общий капитал».</div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: подключение T-Bank по API (read-only) -->
+    <div class="modal-overlay" id="tbankModal" style="display: none;" onclick="if(event.target===this)closeTbankModal()">
+        <div class="modal">
+            <button class="modal-close" onclick="closeTbankModal()">×</button>
+            <h2 class="modal-title">Подключение Т-Банка</h2>
+            <p class="modal-sub">Введите личный <b>read-only</b> токен Т-Инвестиций. Мы создадим портфель на каждый ваш брокерский счёт и подтянем позиции.</p>
+
+            <div class="npf-field">
+                <label class="npf-label" for="tbankToken">API-токен (только чтение)</label>
+                <input class="npf-input" id="tbankToken" type="password" autocomplete="off" placeholder="t.xxxxxxxx…">
+            </div>
+
+            <div class="tb-steps">
+                <div class="tb-step">1. Т-Инвестиции → Настройки → «Токены для API»</div>
+                <div class="tb-step">2. Создайте токен с уровнем доступа <b>«только чтение»</b></div>
+                <div class="tb-step">3. Вставьте его сюда — поручения через него недоступны</div>
+            </div>
+
+            <div class="upload-status" id="tbankStatus" style="display: none;"></div>
+            <button class="npf-submit" id="tbankSubmit" onclick="submitTbank()">Подключить</button>
+            <div class="modal-note">🔒 Токен хранится в зашифрованном виде и используется только для чтения ваших счетов. Никаких операций с деньгами он не выполняет.</div>
         </div>
     </div>
 
@@ -2135,6 +2166,53 @@
         }
         function closeNewPfModal() { document.getElementById('newPfModal').style.display = 'none'; document.body.style.overflow = ''; }
 
+        // Подключение Т-Банка по API
+        function openTbankModal() {
+            document.getElementById('tbankToken').value = '';
+            const st = document.getElementById('tbankStatus'); st.style.display = 'none';
+            document.getElementById('tbankModal').style.display = 'flex'; document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('tbankToken').focus(), 50);
+        }
+        function closeTbankModal() { document.getElementById('tbankModal').style.display = 'none'; document.body.style.overflow = ''; }
+
+        async function submitTbank() {
+            const tok = document.getElementById('tbankToken').value.trim();
+            const st = document.getElementById('tbankStatus');
+            if (tok.length < 10) {
+                st.style.display = 'block'; st.className = 'upload-status err';
+                st.innerText = 'Вставьте корректный токен Т-Инвестиций.'; return;
+            }
+            const btn = document.getElementById('tbankSubmit');
+            btn.disabled = true; btn.innerText = 'Подключаем…';
+            st.style.display = 'block'; st.className = 'upload-status';
+            st.innerText = 'Проверяем токен и загружаем счета…';
+            try {
+                const at = encodeURIComponent(getAccessToken());
+                const r = await fetch(API_BASE + '/api/integrations/tbank/connect?token=' + at, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: tok }),
+                });
+                const result = await r.json();
+                if (r.ok) {
+                    const n = (result.accounts || []).length;
+                    st.className = 'upload-status ok';
+                    st.innerText = `Подключено счетов: ${n}. Обновляем…`;
+                    // Переключаемся на агрегат, чтобы увидеть новые портфели
+                    activePortfolioId = 'all';
+                    await loadPortfolios();
+                    setTimeout(closeTbankModal, 900);
+                } else {
+                    st.className = 'upload-status err';
+                    st.innerText = (result.detail && (result.detail[0]?.msg || result.detail)) || 'Не удалось подключить.';
+                }
+            } catch (e) {
+                st.className = 'upload-status err';
+                st.innerText = 'Не удалось связаться с сервером.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Подключить';
+            }
+        }
+
         // Сегментированный выбор типа счёта
         document.getElementById('npfKind').addEventListener('click', (e) => {
             const btn = e.target.closest('button'); if (!btn) return;
@@ -2183,7 +2261,7 @@
             }
         }
 
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAddModal(); closeBreakdownModal(); closeNewPfModal(); } });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAddModal(); closeBreakdownModal(); closeNewPfModal(); closeTbankModal(); } });
 
         // Раскрытие полной легенды диаграммы (топ-10 → все)
         let _allocExpanded = false;
